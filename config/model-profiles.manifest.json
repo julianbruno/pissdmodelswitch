@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "openai",
+  "managedAgentGroups": {
+    "sdd": [
+      "sdd-init",
+      "sdd-explore",
+      "sdd-research",
+      "sdd-proposal",
+      "sdd-spec",
+      "sdd-design",
+      "sdd-tasks",
+      "sdd-onboard",
+      "sdd-archive",
+      "sdd-apply",
+      "sdd-verify",
+      "sdd-status",
+      "sdd-sync"
+    ],
+    "odd": [
+      "gentle-ai-explore",
+      "gentle-ai-worker",
+      "gentle-ai-verify"
+    ]
+  },
+  "reservedCommandNames": [
+    "status",
+    "list",
+    "preview",
+    "doctor",
+    "undo",
+    "recover"
+  ],
+  "profiles": [
+    {
+      "name": "openai",
+      "modelsFile": "models.openai.json"
+    },
+    {
+      "name": "grok",
+      "modelsFile": "models.grok.json"
+    }
+  ]
+}

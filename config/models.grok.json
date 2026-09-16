@@ -7,6 +7,10 @@
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
   },
+  "sdd-research": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
   "sdd-proposal": {
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
@@ -46,5 +50,17 @@
   "sdd-sync": {
     "model": "xai/grok-4.6",
     "thinking": "medium"
+  },
+  "gentle-ai-explore": {
+    "model": "xai/grok-4.3",
+    "thinking": "medium"
+  },
+  "gentle-ai-worker": {
+    "model": "xai/grok-4.6",
+    "thinking": "high"
+  },
+  "gentle-ai-verify": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
   }
 }

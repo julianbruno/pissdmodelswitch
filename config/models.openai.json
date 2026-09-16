@@ -7,6 +7,10 @@
     "model": "openai-codex/gpt-6-sol",
     "thinking": "xhigh"
   },
+  "sdd-research": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "xhigh"
+  },
   "sdd-proposal": {
     "model": "openai-codex/gpt-6-sol",
     "thinking": "xhigh"
@@ -46,5 +50,17 @@
   "sdd-sync": {
     "model": "openai-codex/gpt-6-sol",
     "thinking": "medium"
+  },
+  "gentle-ai-explore": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "medium"
+  },
+  "gentle-ai-worker": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "gentle-ai-verify": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "xhigh"
   }
 }

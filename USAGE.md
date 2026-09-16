@@ -1,80 +1,94 @@
-# Use `/sdd-models`
+# Use `/jb-sdd-odd-models`
 
-The command reports or switches the global model profile used by the 12 managed SDD subagents.
+The command reports, previews, diagnoses, switches, undoes, or recovers the global model profile used by the managed SDD phase agents and ODD generic agents. Registered profile names come from `model-profiles.manifest.json` instead of being hard-coded.
 
 ## Command reference
 
 | Input | Effect |
 |---|---|
-| `/sdd-models` | Shows usage, active-state detection, and all managed mappings. It does not write files. |
-| `/sdd-models status` | Shows active-state detection and all managed mappings. It does not write files. |
-| `/sdd-models openai` | Validates both named profiles and current files, writes the OpenAI mapping to canonical and runtime configuration, then reloads Pi. |
-| `/sdd-models grok` | Validates both named profiles and current files, writes the Grok mapping to canonical and runtime configuration, then reloads Pi. |
-| `/sdd-models <invalid>` | Displays an unknown-argument warning and usage. It does not write files. |
+| `/jb-sdd-odd-models` | Shows usage, active-state detection, and all managed mappings. Read-only. |
+| `/jb-sdd-odd-models status` | Shows active-state detection and all managed mappings. Read-only. |
+| `/jb-sdd-odd-models doctor` | Performs read-only diagnostics for manifest/profile shape, active canonical/runtime state, transaction journals/locks, local Pi catalog presence, effort compatibility, and auth configuration evidence. |
+| `/jb-sdd-odd-models list` | Lists registered profiles and the default profile. Read-only. |
+| `/jb-sdd-odd-models preview <profile>` | Shows managed canonical/runtime before → after mappings for a profile. Read-only. |
+| `/jb-sdd-odd-models <profile>` | Validates registered profiles and current files, writes the selected profile to canonical and runtime configuration, then reloads Pi. No-op when already aligned. |
+| `/jb-sdd-odd-models undo` | Reverts the last completed profile transaction only if both files still match the recorded transaction output, then reloads Pi. |
+| `/jb-sdd-odd-models recover` | Finishes, records, or clears an interrupted profile transaction when the current file bytes match a safe recorded state, then reloads Pi when recovery changed state. |
+| `/jb-sdd-odd-models <invalid>` | Displays an unknown-argument warning and usage. Read-only. |
 
-Arguments are trimmed and case-insensitive. For example, `/sdd-models OPENAI` selects the OpenAI profile.
+Arguments are trimmed and case-insensitive. For example, `/jb-sdd-odd-models OPENAI` selects the OpenAI profile when `openai` is registered.
 
-## Examples
+## Common checks
 
 ### Inspect without changing anything
 
 ```text
-/sdd-models status
+/jb-sdd-odd-models status
 ```
 
 Expected heading:
 
 ```text
-Active SDD profile: openai
+Active SDD/ODD profile: openai
 ```
 
-The state can also be `grok`, `custom`, or `unknown`. Each following line shows an agent, model, and thinking level. `[misaligned]` means the canonical entry and live runtime entry differ for that agent.
+The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent.
 
-### Select OpenAI
+### Diagnose local configuration
 
 ```text
-/sdd-models openai
+/jb-sdd-odd-models doctor
 ```
 
-On success, the command reports that the OpenAI SDD profile was activated and asks Pi to reload. The canonical profile uses `thinking`; the runtime mapping receives the same value as `effort`.
+`doctor` never writes, repairs, reclaims locks, or reloads Pi. It distinguishes:
 
-### Select Grok
+- missing or malformed managed entries;
+- canonical/runtime drift;
+- active profile states: registered profile, `custom`, or `unknown`;
+- malformed active/history transaction journals;
+- stale or ambiguous transaction locks;
+- unrelated runtime mappings that are preserved;
+- local effective Pi catalog entries found or missing through `ctx.modelRegistry.find()`;
+- effort compatibility using model `reasoning` and `thinkingLevelMap` evidence; and
+- configured-auth evidence through Pi's registry auth status.
+
+A missing local catalog model, missing auth status, or missing registry is a bounded diagnostic. It is not proof that a remote provider is unavailable. `doctor` also cannot establish provider execution or account entitlement.
+
+Installed/global profile status does not prove effective project routing: project overrides and the current Pi session registry can change the effective model catalog.
+
+### List and preview profiles
 
 ```text
-/sdd-models grok
+/jb-sdd-odd-models list
+/jb-sdd-odd-models preview openai
 ```
 
-On success, the Grok mappings are written and Pi reloads. Provider authentication and model access must already be configured.
+The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's after state. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
 
-### Show usage and status together
+### Select a profile
 
 ```text
-/sdd-models
+/jb-sdd-odd-models openai
 ```
 
-This is equivalent to status reporting plus the usage line:
+On success, the selected SDD/ODD mappings are written and Pi reloads. The canonical profile uses `thinking`; the runtime mapping receives the same value as `effort`. If the selected profile is already active, the command leaves file bytes and mtimes untouched and does not reload.
 
-```text
-Usage: /sdd-models status|openai|grok
-```
+## Add a registered profile
 
-### Invalid input
+To add a third profile such as `local`, keep the same managed-agent coverage as existing profiles:
 
-```text
-/sdd-models local
-```
+1. Add `{ "name": "local", "modelsFile": "models.local.json" }` to `model-profiles.manifest.json`.
+2. Create `models.local.json` with exactly every agent listed under the manifest's `managedAgentGroups`.
+3. Use `{ "model": "provider/model", "thinking": "low|medium|high|xhigh" }` for each agent.
+4. Restart or reinstall so the installed manifest/profile files are copied into Pi home.
+5. Run `/jb-sdd-odd-models list`, `/jb-sdd-odd-models preview local`, and `/jb-sdd-odd-models doctor`.
 
-Expected warning:
-
-```text
-Unknown argument: local
-Usage: /sdd-models status|openai|grok
-```
-
-## Reload failure
-
-A failed automatic reload does not undo a successful profile write. The command reports that the selected files remain active; run `/reload` manually or restart Pi.
+Profile names must be safe lowercase command names and cannot use reserved command names such as `status`, `list`, `preview`, `doctor`, `undo`, or `recover`.
 
 ## Completion
 
-Argument completion offers `status`, `openai`, and `grok`, filtered by the typed prefix.
+Argument completion is synchronous and manifest-backed. It offers `status`, `list`, `preview`, `doctor`, `undo`, `recover`, and registered profile names filtered by the typed prefix; `preview <prefix>` completes registered profile names for preview commands.
+
+## Installed extension files
+
+The installed extension imports helper modules from `extensions/model-profiles/`. Package or manual installs must include that directory next to `extensions/sdd-model-profiles.ts`; the helper modules are not standalone auto-loaded extensions.
