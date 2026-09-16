@@ -102,7 +102,7 @@ test("named packaged profiles contain sdd-research matching sdd-explore and exac
   assert.deepEqual(profiles.openai["sdd-research"], profiles.openai["sdd-explore"]);
   assert.deepEqual(profiles.grok["sdd-research"], profiles.grok["sdd-explore"]);
 
-  assert.deepEqual(profiles.openai["sdd-research"], { model: "openai-codex/gpt-6-sol", thinking: "xhigh" });
+  assert.deepEqual(profiles.openai["sdd-research"], { model: "openai-codex/gpt-5.6-sol", thinking: "medium" });
   assert.deepEqual(profiles.grok["sdd-research"], { model: "xai/grok-4.6", thinking: "xhigh" });
 
   for (const profile of Object.values(profiles)) {
@@ -171,7 +171,7 @@ test("canonical and runtime derivation are pure and map thinking to effort", asy
   assert.notEqual(canonical, profiles.openai);
   assert.notEqual(canonical["sdd-research"], profiles.openai["sdd-research"]);
   assert.deepEqual(canonical, profiles.openai);
-  assert.deepEqual(runtimeProfiles["sdd-research"], { model: "openai-codex/gpt-6-sol", effort: "xhigh" });
+  assert.deepEqual(runtimeProfiles["sdd-research"], { model: "openai-codex/gpt-5.6-sol", effort: "medium" });
   assert.deepEqual(runtimeConfig, {
     preserved: true,
     model_profiles: {
@@ -181,5 +181,5 @@ test("canonical and runtime derivation are pure and map thinking to effort", asy
   });
 
   canonical["sdd-research"].thinking = "low";
-  assert.equal(profiles.openai["sdd-research"].thinking, "xhigh");
+  assert.equal(profiles.openai["sdd-research"].thinking, "medium");
 });
