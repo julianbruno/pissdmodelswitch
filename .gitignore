@@ -1,0 +1,36 @@
+# Local dependencies and TypeScript cache
+node_modules/
+*.tsbuildinfo
+
+# Local CodeGraph and Pi runtime state
+.codegraph/
+.atl/
+.pi/
+
+# Local environment values (keep distributable examples)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# macOS, Windows, and Linux desktop metadata
+.DS_Store
+.AppleDouble/
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+.Trash-*/

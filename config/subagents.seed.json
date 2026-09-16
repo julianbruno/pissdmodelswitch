@@ -1,0 +1,52 @@
+{
+  "model_profiles": {
+    "sdd-init": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "high"
+    },
+    "sdd-explore": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "xhigh"
+    },
+    "sdd-proposal": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "xhigh"
+    },
+    "sdd-spec": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "high"
+    },
+    "sdd-design": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "xhigh"
+    },
+    "sdd-tasks": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "high"
+    },
+    "sdd-onboard": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "high"
+    },
+    "sdd-archive": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "high"
+    },
+    "sdd-apply": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "high"
+    },
+    "sdd-verify": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "xhigh"
+    },
+    "sdd-status": {
+      "model": "openai-codex/gpt-6-luna",
+      "effort": "low"
+    },
+    "sdd-sync": {
+      "model": "openai-codex/gpt-6-sol",
+      "effort": "medium"
+    }
+  }
+}

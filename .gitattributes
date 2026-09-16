@@ -1,0 +1,12 @@
+# Normalize detected text to LF on every platform; binary files stay untouched.
+* text=auto eol=lf
+
+# Package sources, configuration, and documentation are always text.
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# POSIX installers need LF even in Windows checkouts (Git Bash / WSL).
+*.sh text eol=lf
