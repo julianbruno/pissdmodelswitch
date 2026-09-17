@@ -58,9 +58,11 @@ async function copyPackageFixture(): Promise<string> {
   await mkdir(join(root, "config"), { recursive: true });
   await mkdir(join(root, "extensions"), { recursive: true });
   await mkdir(join(root, "install"), { recursive: true });
+  const manifest = validateManifest(await readJson("config/model-profiles.manifest.json"));
   await copyFile("config/model-profiles.manifest.json", join(root, "config", "model-profiles.manifest.json"));
-  await copyFile("config/models.openai.json", join(root, "config", "models.openai.json"));
-  await copyFile("config/models.grok.json", join(root, "config", "models.grok.json"));
+  for (const profile of manifest.profiles) {
+    await copyFile(join("config", profile.modelsFile), join(root, "config", profile.modelsFile));
+  }
   await copyFile("extensions/sdd-model-profiles.ts", join(root, "extensions", "sdd-model-profiles.ts"));
   await copyTree("extensions/model-profiles", join(root, "extensions", "model-profiles"));
   await copyFile("install/install.sh", join(root, "install", "install.sh"));
@@ -100,10 +102,10 @@ exec ${JSON.stringify(process.execPath)} "$@"
 
 test("packaged duplicate active and seed files are eliminated after equivalence proof", async () => {
   const { manifest, profiles } = await expectedDefaultFrom();
-  assert.deepEqual(deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest)["sdd-research"], profiles.openai["sdd-research"]);
+  assert.deepEqual(deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest)["sdd-research"], profiles[manifest.defaultProfile]["sdd-research"]);
   assert.deepEqual(deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest)["sdd-research"], {
-    model: profiles.openai["sdd-research"].model,
-    effort: profiles.openai["sdd-research"].thinking,
+    model: profiles[manifest.defaultProfile]["sdd-research"].model,
+    effort: profiles[manifest.defaultProfile]["sdd-research"].thinking,
   });
   assert.equal(await exists("config/models.json"), false);
   assert.equal(await exists("config/subagents.seed.json"), false);
@@ -146,7 +148,10 @@ test("fresh temp install copies manifest, registered profiles, extension helpers
   }
   assert.deepEqual(await readJson(join(piHome, "gentle-ai", "models.json")), deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest));
   assert.deepEqual((await readJson(join(piHome, "agent", "subagents.json"))).model_profiles, deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest));
-  assert.deepEqual((await readJson(join(piHome, "gentle-ai", "models.json")))["review-risk"], profiles.grok["review-risk"]);
+  assert.deepEqual(
+    (await readJson(join(piHome, "gentle-ai", "models.json")))["review-risk"],
+    profiles[manifest.oppositeProviderJudges.profilePairs[manifest.defaultProfile]]["review-risk"],
+  );
   assert.equal(await exists(join(piHome, "agent", "extensions", "sdd-model-profiles.ts")), true);
   assert.equal(await exists(join(piHome, "agent", "extensions", "model-profiles", "core.ts")), true);
   assert.equal(await exists(join(piHome, "agent", "extensions", "model-profiles", "transaction.ts")), true);
@@ -224,7 +229,7 @@ test("dynamic third profile installs and the installed command can status and sw
   const ctx = { cwd: piHome, ui: { notify: (message: string, level: string) => notifications.push({ message, level }) }, reload: async () => { reloads += 1; } };
 
   await command.handler("status", ctx);
-  assert.match(notifications.at(-1)?.message ?? "", /Active SDD\/ODD profile: openai/);
+  assert.match(notifications.at(-1)?.message ?? "", new RegExp(`Active SDD/ODD profile: ${manifest.defaultProfile}`));
   await command.handler("local", ctx);
   assert.equal(reloads, 1);
   assert.match(notifications.at(-1)?.message ?? "", /local profile activated/);

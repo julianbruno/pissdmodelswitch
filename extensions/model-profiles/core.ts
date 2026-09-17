@@ -48,7 +48,7 @@ export type ModelProfilesManifest = {
 export type ValidatedModelProfile = Record<string, ModelProfileEntry>;
 export type RuntimeModelProfiles = Record<string, RuntimeModelProfileEntry>;
 
-const safeNamePattern = /^[a-z][a-z0-9-]*$/;
+const safeNamePattern = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
 const providerModelPattern = /^[^/\s]+\/[^/\s]+$/;
 const supportedEffortSet = new Set<string>(SUPPORTED_EFFORTS);
 const builtInReservedCommandSet = new Set<string>(RESERVED_COMMAND_NAMES);

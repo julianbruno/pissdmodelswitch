@@ -1,90 +1,90 @@
 {
   "sdd-init": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-explore": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "sdd-research": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "sdd-proposal": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "sdd-spec": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-design": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "sdd-tasks": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-onboard": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-archive": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-apply": {
-    "model": "xai/grok-4.6",
-    "thinking": "high"
+    "model": "openai-codex/gpt-5.6-terra",
+    "thinking": "medium"
   },
   "sdd-verify": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "sdd-status": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "sdd-sync": {
-    "model": "xai/grok-4.3",
+    "model": "openai-codex/gpt-5.6-luna",
     "thinking": "high"
   },
   "gentle-ai-explore": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "gentle-ai-worker": {
-    "model": "xai/grok-4.6",
-    "thinking": "high"
+    "model": "openai-codex/gpt-5.6-terra",
+    "thinking": "medium"
   },
   "gentle-ai-verify": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "review-risk": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "review-resilience": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "review-readability": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "review-reliability": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "jd-judge-a": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
   "jd-judge-b": {
-    "model": "xai/grok-4.6",
+    "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   }
 }

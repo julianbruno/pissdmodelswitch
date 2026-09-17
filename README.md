@@ -38,6 +38,8 @@ PI_HOME=/path/to/pi-home pi
 
 The command manages every agent named in `config/model-profiles.manifest.json`. The current manifest covers SDD phase agents, including `sdd-research`, ODD generic agents (`gentle-ai-explore`, `gentle-ai-worker`, and `gentle-ai-verify`), and configured judge/reviewer agents (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`).
 
-By default, judge/reviewer agents use the opposite configured provider pair: selecting `openai` routes judges to the `grok` profile, and selecting `grok` routes judges to the `openai` profile. Manifests without configured judge agents keep the previous uniform-profile behavior.
+Version 1.1 registers every named profile from `config/named-profiles.json`: GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful variants. The default profile is `gpt-5.6-recommended`; legacy `openai` and `grok` aliases remain registered for compatibility.
+
+By default, judge/reviewer agents use an opposite-provider profile in the same cost lane: GPT-family profiles route judges to the matching Grok lane, and Grok profiles route judges to the matching GPT-5.6 lane. Legacy `openai` still pairs with `grok`, and `grok` still pairs with `openai`. Manifests without configured judge agents keep the previous uniform-profile behavior.
 
 It writes only the managed keys in the installed canonical and runtime mappings. Unrelated top-level JSON keys and unrelated `model_profiles` entries are preserved and reported by `doctor` rather than treated as errors.

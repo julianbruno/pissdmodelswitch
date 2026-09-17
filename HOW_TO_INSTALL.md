@@ -23,11 +23,11 @@ The installer writes:
 - `~/.pi/agent/extensions/sdd-model-profiles.ts`
 - helper modules under `~/.pi/agent/extensions/model-profiles/`
 - `~/.pi/gentle-ai/model-profiles.manifest.json`
-- every profile registered by that manifest, such as `models.openai.json` and `models.grok.json`
+- every profile registered by that manifest, including GPT-5.6, GPT Astra, GPT Astra-only, Grok lanes, and legacy alias files such as `models.openai.json` and `models.grok.json`
 - derived active `~/.pi/gentle-ai/models.json` from the manifest default profile, including opposite-provider judge entries when configured
 - the merged managed entries in `~/.pi/agent/subagents.json`, using the same effective mixed profile
 
-Existing unrelated canonical keys, unrelated top-level runtime keys, and unrelated `model_profiles` entries in `subagents.json` are preserved. Re-running the installer is safe: identical files are left unchanged and no backup is created. With the packaged manifest, the default `openai` install routes configured judge/reviewer agents to the `grok` profile unless `oppositeProviderJudges` is disabled or has no agents.
+Existing unrelated canonical keys, unrelated top-level runtime keys, and unrelated `model_profiles` entries in `subagents.json` are preserved. Re-running the installer is safe: identical files are left unchanged and no backup is created. With the packaged manifest, the default `gpt-5.6-recommended` install routes configured judge/reviewer agents to `grok-recommended` unless `oppositeProviderJudges` is disabled or has no agents.
 
 ### Custom Pi home
 
@@ -57,11 +57,11 @@ If an active transaction journal or lock exists, the installer fails closed befo
 1. Restart Pi so it loads the installed extension.
 2. Run `/jb-sdd-odd-models status`.
 3. Run `/jb-sdd-odd-models doctor`.
-4. Confirm that all managed mappings are listed and the active profile is `openai`, `grok`, another registered profile, or intentionally `custom`.
+4. Confirm that all managed mappings are listed and the active profile is `gpt-5.6-recommended`, another registered profile, or intentionally `custom`.
 5. Optionally switch and verify:
 
    ```text
-   /jb-sdd-odd-models grok
+   /jb-sdd-odd-models grok-recommended
    /jb-sdd-odd-models status
    /jb-sdd-odd-models doctor
    ```

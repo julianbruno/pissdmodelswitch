@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "roles": ["orquestador", "razonamiento", "codigo", "liviano"],
+  "notes": {
+    "astra": "GPT-6 Astra is a single model (gpt-6-astra). Cost lanes still use GPT-5.6 Terra/Luna. Switcher effort max is not supported; Powerful Astra reasoning uses xhigh.",
+    "astraOnlyCost": "Astra-only Low-cost and Recommended collapse to the same assignment. Liviano cannot match Luna price.",
+    "grok": "Sol→grok-4.6, Terra→grok-4.3, Luna→grok-4.20-0309-non-reasoning (Low-cost) or grok-4.3 (Recommended/Powerful)."
+  },
+  "profiles": [
+    {
+      "name": "gpt-5.6-low-cost",
+      "label": "Low-cost",
+      "family": "gpt-5.6",
+      "recommended": false,
+      "blurb": "Lowest-cost GPT-5.6 mix — Terra for work, Luna for lightweight phases",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-5.6-terra", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-5.6-sol", "thinking": "medium" },
+        "codigo": { "model": "openai-codex/gpt-5.6-terra", "thinking": "medium" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-5.6-recommended",
+      "label": "Recommended",
+      "family": "gpt-5.6",
+      "recommended": true,
+      "blurb": "Balanced GPT-5.6 mix — Sol for reasoning, Terra for code, Luna for light work",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-5.6-sol", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-5.6-sol", "thinking": "medium" },
+        "codigo": { "model": "openai-codex/gpt-5.6-terra", "thinking": "high" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-5.6-powerful",
+      "label": "Powerful",
+      "family": "gpt-5.6",
+      "recommended": false,
+      "blurb": "High-effort GPT-5.6 mix — Sol for reasoning and code, Luna for light work",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-5.6-sol", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-5.6-sol", "thinking": "xhigh" },
+        "codigo": { "model": "openai-codex/gpt-5.6-sol", "thinking": "high" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-astra-low-cost",
+      "label": "Low-cost",
+      "family": "gpt-astra",
+      "recommended": false,
+      "blurb": "Lowest-cost Astra mix — Terra for work, Astra only for reasoning, Luna for lightweight phases",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-5.6-terra", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "medium" },
+        "codigo": { "model": "openai-codex/gpt-5.6-terra", "thinking": "medium" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-astra-recommended",
+      "label": "Recommended",
+      "family": "gpt-astra",
+      "recommended": true,
+      "blurb": "Balanced Astra mix — Astra for orchestrator/reasoning, Terra for code, Luna for light work",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-6-astra", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "medium" },
+        "codigo": { "model": "openai-codex/gpt-5.6-terra", "thinking": "high" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-astra-powerful",
+      "label": "Powerful",
+      "family": "gpt-astra",
+      "recommended": false,
+      "blurb": "High-effort Astra mix — Astra for reasoning and code, Luna for light work",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-6-astra", "thinking": "medium" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "xhigh" },
+        "codigo": { "model": "openai-codex/gpt-6-astra", "thinking": "high" },
+        "liviano": { "model": "openai-codex/gpt-5.6-luna", "thinking": "high" }
+      }
+    },
+    {
+      "name": "grok-low-cost",
+      "label": "Low-cost",
+      "family": "grok",
+      "recommended": false,
+      "blurb": "Lowest-cost Grok mix — 4.3 for work, 4.6 only for reasoning, 4.20 for lightweight phases",
+      "roles": {
+        "orquestador": { "model": "xai/grok-4.3", "thinking": "medium" },
+        "razonamiento": { "model": "xai/grok-4.6", "thinking": "medium" },
+        "codigo": { "model": "xai/grok-4.3", "thinking": "medium" },
+        "liviano": { "model": "xai/grok-4.20-0309-non-reasoning", "thinking": "low" }
+      }
+    },
+    {
+      "name": "grok-recommended",
+      "label": "Recommended",
+      "family": "grok",
+      "recommended": true,
+      "blurb": "Balanced Grok mix — 4.6 for orchestrator/reasoning/code, 4.3 for light work",
+      "roles": {
+        "orquestador": { "model": "xai/grok-4.6", "thinking": "medium" },
+        "razonamiento": { "model": "xai/grok-4.6", "thinking": "medium" },
+        "codigo": { "model": "xai/grok-4.6", "thinking": "high" },
+        "liviano": { "model": "xai/grok-4.3", "thinking": "high" }
+      }
+    },
+    {
+      "name": "grok-powerful",
+      "label": "Powerful",
+      "family": "grok",
+      "recommended": false,
+      "blurb": "High-effort Grok mix — 4.6 for reasoning and code, 4.3 for light work",
+      "roles": {
+        "orquestador": { "model": "xai/grok-4.6", "thinking": "medium" },
+        "razonamiento": { "model": "xai/grok-4.6", "thinking": "xhigh" },
+        "codigo": { "model": "xai/grok-4.6", "thinking": "high" },
+        "liviano": { "model": "xai/grok-4.3", "thinking": "high" }
+      }
+    },
+    {
+      "name": "gpt-astra-only-low-cost",
+      "label": "Low-cost",
+      "family": "gpt-astra-only",
+      "recommended": false,
+      "blurb": "Cost-matched Astra-only — all low; still above original Luna/Terra volume",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "codigo": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "liviano": { "model": "openai-codex/gpt-6-astra", "thinking": "low" }
+      }
+    },
+    {
+      "name": "gpt-astra-only-recommended",
+      "label": "Recommended",
+      "family": "gpt-astra-only",
+      "recommended": true,
+      "blurb": "Cost-matched Astra-only — Sol-medium → Astra-low; Terra code stays low",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "codigo": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "liviano": { "model": "openai-codex/gpt-6-astra", "thinking": "low" }
+      }
+    },
+    {
+      "name": "gpt-astra-only-powerful",
+      "label": "Powerful",
+      "family": "gpt-astra-only",
+      "recommended": false,
+      "blurb": "Cost-matched Astra-only — Sol-xhigh → Astra-high, Sol-high code → Astra-medium",
+      "roles": {
+        "orquestador": { "model": "openai-codex/gpt-6-astra", "thinking": "low" },
+        "razonamiento": { "model": "openai-codex/gpt-6-astra", "thinking": "high" },
+        "codigo": { "model": "openai-codex/gpt-6-astra", "thinking": "medium" },
+        "liviano": { "model": "openai-codex/gpt-6-astra", "thinking": "low" }
+      }
+    }
+  ]
+}

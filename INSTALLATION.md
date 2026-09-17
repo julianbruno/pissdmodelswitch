@@ -36,8 +36,7 @@ The installer copies the command and profile data into Pi home:
 | `$PI_HOME/agent/extensions/sdd-model-profiles.ts` | Slash command extension |
 | `$PI_HOME/agent/extensions/model-profiles/` | Helper modules |
 | `$PI_HOME/gentle-ai/model-profiles.manifest.json` | Profile manifest |
-| `$PI_HOME/gentle-ai/models.openai.json` | OpenAI profile |
-| `$PI_HOME/gentle-ai/models.grok.json` | Grok profile |
+| `$PI_HOME/gentle-ai/models.<profile>.json` | Every registered named profile, including GPT-5.6, GPT Astra, GPT Astra-only, Grok lanes, and legacy aliases |
 | `$PI_HOME/gentle-ai/models.json` | Derived active canonical profile |
 | `$PI_HOME/agent/subagents.json` | Merged runtime `model_profiles` entries |
 
@@ -76,7 +75,7 @@ Run:
 Expected result:
 
 - Pi recognizes `/jb-sdd-odd-models`.
-- `status` shows `openai`, `grok`, another registered profile, or intentionally `custom`.
+- `status` shows `gpt-5.6-recommended` by default, another registered profile, or intentionally `custom`.
 - `doctor` reports healthy managed mappings or actionable diagnostics.
 
 ## Common recovery path

@@ -16,7 +16,7 @@ The command reports, previews, diagnoses, switches, undoes, or recovers the glob
 | `/jb-sdd-odd-models recover` | Finishes, records, or clears an interrupted profile transaction when the current file bytes match a safe recorded state, then reloads Pi when recovery changed state. |
 | `/jb-sdd-odd-models <invalid>` | Displays an unknown-argument warning and usage. Read-only. |
 
-Arguments are trimmed and case-insensitive. For example, `/jb-sdd-odd-models OPENAI` selects the OpenAI profile when `openai` is registered.
+Arguments are trimmed and case-insensitive. Dots and hyphens are supported in registered path-safe profile names, so `/jb-sdd-odd-models GPT-5.6-RECOMMENDED` selects `gpt-5.6-recommended`.
 
 ## Common checks
 
@@ -29,10 +29,10 @@ Arguments are trimmed and case-insensitive. For example, `/jb-sdd-odd-models OPE
 Expected heading:
 
 ```text
-Active SDD/ODD profile: openai
+Active SDD/ODD profile: gpt-5.6-recommended
 ```
 
-The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent. With the packaged `oppositeProviderJudges` block, `openai` status means normal agents match OpenAI while configured judges match Grok; `grok` status means the inverse.
+The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent. With the packaged `oppositeProviderJudges` block, GPT-family profiles use the matching Grok cost lane for judges, Grok profiles use the matching GPT-5.6 lane for judges, and legacy `openai`/`grok` aliases retain their previous pairing.
 
 ### Diagnose local configuration
 
@@ -60,7 +60,7 @@ Installed/global profile status does not prove effective project routing: projec
 
 ```text
 /jb-sdd-odd-models list
-/jb-sdd-odd-models preview openai
+/jb-sdd-odd-models preview gpt-5.6-recommended
 ```
 
 The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's effective after state, including opposite-provider judge mappings when configured. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
@@ -68,7 +68,7 @@ The preview shows each managed agent's current canonical entry and runtime entry
 ### Select a profile
 
 ```text
-/jb-sdd-odd-models openai
+/jb-sdd-odd-models gpt-5.6-recommended
 ```
 
 On success, the selected SDD/ODD mappings are written and Pi reloads. The canonical profile uses `thinking`; the runtime mapping receives the same value as `effort`. If the selected profile is already active, the command leaves file bytes and mtimes untouched and does not reload.
@@ -83,7 +83,7 @@ To add a third profile such as `local`, keep the same active managed-agent cover
 4. Restart or reinstall so the installed manifest/profile files are copied into Pi home.
 5. Run `/jb-sdd-odd-models list`, `/jb-sdd-odd-models preview local`, and `/jb-sdd-odd-models doctor`.
 
-Profile names must be safe lowercase command names and cannot use reserved command names such as `status`, `list`, `preview`, `doctor`, `undo`, or `recover`.
+Profile names must be safe lowercase command names: start with a lowercase letter, use lowercase letters/digits separated by single `-` or `.` segments, and cannot use reserved command names such as `status`, `list`, `preview`, `doctor`, `undo`, or `recover`.
 
 ## Completion
 

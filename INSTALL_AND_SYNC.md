@@ -18,10 +18,10 @@ Then restart Pi and run:
 /jb-sdd-odd-models doctor
 ```
 
-If the active profile is not `openai`, switch to it:
+If the active profile is not `gpt-5.6-recommended`, switch to it:
 
 ```text
-/jb-sdd-odd-models openai
+/jb-sdd-odd-models gpt-5.6-recommended
 /jb-sdd-odd-models status
 ```
 
@@ -35,7 +35,7 @@ It writes or updates:
 - `~/.pi/agent/extensions/sdd-model-profiles.ts`
 - `~/.pi/agent/extensions/model-profiles/`
 - `~/.pi/gentle-ai/model-profiles.manifest.json`
-- registered profile files such as `~/.pi/gentle-ai/models.openai.json`
+- registered profile files such as `~/.pi/gentle-ai/models.gpt-5.6-recommended.json`
 - active `~/.pi/gentle-ai/models.json`
 - managed `model_profiles` entries in `~/.pi/agent/subagents.json`
 
@@ -70,13 +70,13 @@ Recover only when the diagnostic says it is safe:
 
 ## Expected result
 
-After reinstalling and selecting `openai`, Pi should use the OpenAI profile from:
+After reinstalling and selecting `gpt-5.6-recommended`, Pi should use the default named profile from:
 
 ```text
-config/models.openai.json
+config/models.gpt-5.6-recommended.json
 ```
 
-For the current Recommended GPT-5.6 mapping, that means:
+That means:
 
 | Role | Model | Effort |
 |---|---|---|

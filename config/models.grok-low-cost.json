@@ -1,7 +1,7 @@
 {
   "sdd-init": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-explore": {
     "model": "xai/grok-4.6",
@@ -16,48 +16,48 @@
     "thinking": "medium"
   },
   "sdd-spec": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-design": {
     "model": "xai/grok-4.6",
     "thinking": "medium"
   },
   "sdd-tasks": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-onboard": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-archive": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-apply": {
-    "model": "xai/grok-4.6",
-    "thinking": "high"
+    "model": "xai/grok-4.3",
+    "thinking": "medium"
   },
   "sdd-verify": {
     "model": "xai/grok-4.6",
     "thinking": "medium"
   },
   "sdd-status": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "sdd-sync": {
-    "model": "xai/grok-4.3",
-    "thinking": "high"
+    "model": "xai/grok-4.20-0309-non-reasoning",
+    "thinking": "low"
   },
   "gentle-ai-explore": {
     "model": "xai/grok-4.6",
     "thinking": "medium"
   },
   "gentle-ai-worker": {
-    "model": "xai/grok-4.6",
-    "thinking": "high"
+    "model": "xai/grok-4.3",
+    "thinking": "medium"
   },
   "gentle-ai-verify": {
     "model": "xai/grok-4.6",

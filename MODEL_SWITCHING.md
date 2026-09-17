@@ -39,7 +39,9 @@ A switch that is already semantically aligned leaves bytes and mtimes untouched 
 
 The optional `oppositeProviderJudges` manifest block controls mixed judge routing. `enabled` defaults to `true`, but absent or empty `agents` preserves the previous uniform-profile behavior. The packaged manifest explicitly configures these judge/reviewer agents: `review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`.
 
-For the packaged profile pair, selecting `openai` writes normal SDD/ODD agents from `models.openai.json` and judge/reviewer agents from `models.grok.json`; selecting `grok` does the inverse. If a registered profile has no `profilePairs` entry, its judges use that same selected profile.
+Version 1.1 packages GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful profiles from `config/named-profiles.json`. The default installed profile is `gpt-5.6-recommended`; `openai` and `grok` remain compatibility aliases for `gpt-5.6-recommended` and `grok-recommended`.
+
+For the packaged profiles, selecting a GPT-family lane writes normal SDD/ODD agents from that profile and judge/reviewer agents from the matching Grok lane. Selecting a Grok lane writes normal agents from Grok and judges from the matching GPT-5.6 lane. If a registered profile has no `profilePairs` entry, its judges use that same selected profile.
 
 ## Managed effort mapping
 
@@ -110,7 +112,7 @@ If reload fails, the write is not rolled back: the selected files remain install
 
 Status and doctor compare all managed entries in both active files with each registered named profile:
 
-- **registered profile name**: canonical and runtime entries both match that profile.
+- **registered profile name**: canonical and runtime entries both match that profile. When multiple aliases match the same bytes, the manifest order prefers the named default over legacy aliases.
 - **`custom`**: all files validate, but the combined canonical/runtime mapping does not exactly match a registered profile.
 - **`unknown`**: reading, JSON parsing, validation, or required managed-entry inspection fails.
 

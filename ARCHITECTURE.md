@@ -10,7 +10,7 @@ This package is a small configuration-and-extension layer. It does not bundle Pi
 | `extensions/model-profiles/core.ts` | Owns manifest/profile validation, opposite-provider judge selection, and canonical/runtime derivation. | Pi extension registration. |
 | `extensions/model-profiles/transaction.ts` | Owns read/write transaction locking, active journal, history, guarded undo, recovery, and read-only inspection diagnostics. | Choosing model profiles or repairing malformed state automatically. |
 | `config/model-profiles.manifest.json` | Defines schema version, managed agent groups, opposite-provider judge routing, default profile, reserved command names, and registered profile files. | Runtime behavior outside declared mappings. |
-| `config/models.<profile>.json` | Defines each named canonical model profile; active files are derived from the manifest default at install time. | Runtime behavior or user overrides. |
+| `config/models.<profile>.json` | Defines each named canonical model profile; version 1.1 materializes every profile from `config/named-profiles.json` plus legacy aliases. Active files are derived from the manifest default at install time. | Runtime behavior or user overrides. |
 | `install/install.sh` and `install/model-profiles-install.ts` | Enforce the Node strip-types minimum, validate assets, back up changed targets, install extension/helper layout, and perform a merge-friendly runtime update. | Installing Gentle Pi, credentials, or providers. |
 | Documentation | Explains operation, recovery, and limitations. | A license grant; see `NOTICE.md`. |
 
@@ -39,7 +39,7 @@ Provider authentication/model catalog
 
 The installer writes only beneath `PI_HOME` at installation time. It validates the versioned manifest and every registered profile before writing, derives active `models.json` and merged `subagents.json` entries from the default named profile using the same opposite-provider judge logic as the command, preserves unrelated JSON keys, and creates timestamped backups for existing targets whose content changes. It also installs `extensions/model-profiles/core.ts` and `extensions/model-profiles/transaction.ts` next to the command extension, which is required for the installed command to load.
 
-The packaged extension resolves Pi home from `PI_HOME` when set, otherwise retaining `~/.pi` behavior. A custom value must be exported into the Pi process as well as the installer process.
+The packaged extension resolves Pi home from `PI_HOME` when set, otherwise retaining `~/.pi` behavior. A custom value must be exported into the Pi process as well as the installer process. Profile names are path-safe command arguments: lowercase alphanumeric segments separated by `-` or `.`, with no spaces or path separators.
 
 ## Version boundary
 

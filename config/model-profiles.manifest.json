@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "defaultProfile": "openai",
+  "defaultProfile": "gpt-5.6-recommended",
   "managedAgentGroups": {
     "sdd": [
       "sdd-init",
@@ -42,6 +42,18 @@
       "jd-judge-b"
     ],
     "profilePairs": {
+      "gpt-5.6-low-cost": "grok-low-cost",
+      "gpt-5.6-recommended": "grok-recommended",
+      "gpt-5.6-powerful": "grok-powerful",
+      "gpt-astra-low-cost": "grok-low-cost",
+      "gpt-astra-recommended": "grok-recommended",
+      "gpt-astra-powerful": "grok-powerful",
+      "gpt-astra-only-low-cost": "grok-low-cost",
+      "gpt-astra-only-recommended": "grok-recommended",
+      "gpt-astra-only-powerful": "grok-powerful",
+      "grok-low-cost": "gpt-5.6-low-cost",
+      "grok-recommended": "gpt-5.6-recommended",
+      "grok-powerful": "gpt-5.6-powerful",
       "openai": "grok",
       "grok": "openai"
     }
@@ -54,6 +66,54 @@
     {
       "name": "grok",
       "modelsFile": "models.grok.json"
+    },
+    {
+      "name": "gpt-5.6-low-cost",
+      "modelsFile": "models.gpt-5.6-low-cost.json"
+    },
+    {
+      "name": "gpt-5.6-recommended",
+      "modelsFile": "models.gpt-5.6-recommended.json"
+    },
+    {
+      "name": "gpt-5.6-powerful",
+      "modelsFile": "models.gpt-5.6-powerful.json"
+    },
+    {
+      "name": "gpt-astra-low-cost",
+      "modelsFile": "models.gpt-astra-low-cost.json"
+    },
+    {
+      "name": "gpt-astra-recommended",
+      "modelsFile": "models.gpt-astra-recommended.json"
+    },
+    {
+      "name": "gpt-astra-powerful",
+      "modelsFile": "models.gpt-astra-powerful.json"
+    },
+    {
+      "name": "grok-low-cost",
+      "modelsFile": "models.grok-low-cost.json"
+    },
+    {
+      "name": "grok-recommended",
+      "modelsFile": "models.grok-recommended.json"
+    },
+    {
+      "name": "grok-powerful",
+      "modelsFile": "models.grok-powerful.json"
+    },
+    {
+      "name": "gpt-astra-only-low-cost",
+      "modelsFile": "models.gpt-astra-only-low-cost.json"
+    },
+    {
+      "name": "gpt-astra-only-recommended",
+      "modelsFile": "models.gpt-astra-only-recommended.json"
+    },
+    {
+      "name": "gpt-astra-only-powerful",
+      "modelsFile": "models.gpt-astra-only-powerful.json"
     }
   ]
 }

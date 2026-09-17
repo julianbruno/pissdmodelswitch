@@ -1,0 +1,90 @@
+{
+  "sdd-init": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-explore": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "sdd-research": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "sdd-proposal": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "sdd-spec": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-design": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "sdd-tasks": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-onboard": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-archive": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-apply": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "medium"
+  },
+  "sdd-verify": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "sdd-status": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "sdd-sync": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
+  "gentle-ai-explore": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "gentle-ai-worker": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "medium"
+  },
+  "gentle-ai-verify": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-risk": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-resilience": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-readability": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-reliability": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "jd-judge-a": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "jd-judge-b": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  }
+}

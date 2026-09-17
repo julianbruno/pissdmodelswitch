@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -17,6 +18,7 @@ import {
   validateManifest,
   validateNamedProfile,
   validateProfileSet,
+  type ModelProfileEntry,
   type ModelProfilesManifest,
   type ValidatedModelProfile,
 } from "../extensions/model-profiles/core.ts";
@@ -47,8 +49,47 @@ const expectedJudgeAgents = [
 ];
 const expectedAgents = [...expectedSddAgents, ...expectedOddAgents, ...expectedJudgeAgents];
 const expectedNonJudgeAgents = [...expectedSddAgents, ...expectedOddAgents];
+const roleExpansion: Record<string, string[]> = {
+  razonamiento: [
+    "sdd-explore",
+    "sdd-research",
+    "sdd-proposal",
+    "sdd-design",
+    "sdd-verify",
+    "gentle-ai-explore",
+    "gentle-ai-verify",
+    ...expectedJudgeAgents,
+  ],
+  codigo: ["sdd-apply", "gentle-ai-worker"],
+  liviano: ["sdd-init", "sdd-spec", "sdd-tasks", "sdd-onboard", "sdd-archive", "sdd-status", "sdd-sync"],
+};
+const expectedOppositePairs: Record<string, string> = {
+  "gpt-5.6-low-cost": "grok-low-cost",
+  "gpt-5.6-recommended": "grok-recommended",
+  "gpt-5.6-powerful": "grok-powerful",
+  "gpt-astra-low-cost": "grok-low-cost",
+  "gpt-astra-recommended": "grok-recommended",
+  "gpt-astra-powerful": "grok-powerful",
+  "gpt-astra-only-low-cost": "grok-low-cost",
+  "gpt-astra-only-recommended": "grok-recommended",
+  "gpt-astra-only-powerful": "grok-powerful",
+  "grok-low-cost": "gpt-5.6-low-cost",
+  "grok-recommended": "gpt-5.6-recommended",
+  "grok-powerful": "gpt-5.6-powerful",
+  openai: "grok",
+  grok: "openai",
+};
 
-async function readJson(path: string): Promise<unknown> {
+type NamedProfilesCatalog = {
+  schemaVersion: 1;
+  roles: string[];
+  profiles: Array<{
+    name: string;
+    roles: Record<string, ModelProfileEntry>;
+  }>;
+};
+
+async function readJson(path: string): Promise<any> {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -56,17 +97,30 @@ async function packagedManifest(): Promise<ModelProfilesManifest> {
   return validateManifest(await readJson("config/model-profiles.manifest.json"));
 }
 
+async function packagedNamedProfiles(): Promise<NamedProfilesCatalog> {
+  return await readJson("config/named-profiles.json");
+}
+
 async function packagedProfiles(manifest: ModelProfilesManifest): Promise<Record<string, ValidatedModelProfile>> {
-  return validateProfileSet({
-    openai: await readJson("config/models.openai.json"),
-    grok: await readJson("config/models.grok.json"),
-  }, manifest);
+  const inputs: Record<string, unknown> = {};
+  for (const profile of manifest.profiles) {
+    inputs[profile.name] = await readJson(join("config", profile.modelsFile));
+  }
+  return validateProfileSet(inputs, manifest);
+}
+
+function expectedFullProfile(namedProfile: NamedProfilesCatalog["profiles"][number]): ValidatedModelProfile {
+  const entries: Array<[string, ModelProfileEntry]> = [];
+  for (const [role, agents] of Object.entries(roleExpansion)) {
+    for (const agent of agents) entries.push([agent, { ...namedProfile.roles[role] }]);
+  }
+  return Object.fromEntries(entries);
 }
 
 function validManifestPatch(patch: Record<string, unknown>): unknown {
   return {
     schemaVersion: 1,
-    defaultProfile: "openai",
+    defaultProfile: "gpt-5.6-recommended",
     managedAgentGroups: {
       sdd: expectedSddAgents,
       odd: expectedOddAgents,
@@ -76,13 +130,13 @@ function validManifestPatch(patch: Record<string, unknown>): unknown {
       enabled: true,
       agents: expectedJudgeAgents,
       profilePairs: {
-        openai: "grok",
-        grok: "openai",
+        "gpt-5.6-recommended": "grok-recommended",
+        "grok-recommended": "gpt-5.6-recommended",
       },
     },
     profiles: [
-      { name: "openai", modelsFile: "models.openai.json" },
-      { name: "grok", modelsFile: "models.grok.json" },
+      { name: "gpt-5.6-recommended", modelsFile: "models.gpt-5.6-recommended.json" },
+      { name: "grok-recommended", modelsFile: "models.grok-recommended.json" },
     ],
     ...patch,
   };
@@ -95,11 +149,18 @@ function validProfilePatch(patch: Record<string, unknown>): Record<string, unkno
   };
 }
 
-test("packaged manifest registers versioned profiles and complete managed agent groups", async () => {
+test("package version is 1.1.0", async () => {
+  assert.equal((await readJson("package.json")).version, "1.1.0");
+});
+
+test("packaged manifest registers every named profile plus compatibility aliases", async () => {
   const manifest = await packagedManifest();
+  const catalog = await packagedNamedProfiles();
+  const namedProfileNames = catalog.profiles.map((profile) => profile.name);
+  const expectedRegisteredNames = ["openai", "grok", ...namedProfileNames];
 
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.defaultProfile, "openai");
+  assert.equal(manifest.defaultProfile, "gpt-5.6-recommended");
   assert.deepEqual(manifest.managedAgentGroups, {
     sdd: expectedSddAgents,
     odd: expectedOddAgents,
@@ -108,17 +169,11 @@ test("packaged manifest registers versioned profiles and complete managed agent 
   assert.deepEqual(manifest.oppositeProviderJudges, {
     enabled: true,
     agents: expectedJudgeAgents,
-    profilePairs: {
-      openai: "grok",
-      grok: "openai",
-    },
+    profilePairs: expectedOppositePairs,
   });
-  assert.deepEqual(manifest.profiles, [
-    { name: "openai", modelsFile: "models.openai.json" },
-    { name: "grok", modelsFile: "models.grok.json" },
-  ]);
+  assert.deepEqual(manifest.profiles, expectedRegisteredNames.map((name) => ({ name, modelsFile: `models.${name}.json` })));
   assert.deepEqual(managedAgents(manifest), expectedAgents);
-  assert.deepEqual(registeredProfileNames(manifest), ["openai", "grok"]);
+  assert.deepEqual(registeredProfileNames(manifest), expectedRegisteredNames);
 });
 
 test("manifests without configured opposite-provider judges preserve legacy managed coverage", () => {
@@ -144,17 +199,19 @@ test("manifests without configured opposite-provider judges preserve legacy mana
   assert.deepEqual(managedAgents(emptyJudgesManifest), expectedNonJudgeAgents);
 });
 
-test("named packaged profiles contain sdd-research matching sdd-explore and exact managed coverage", async () => {
+test("generated packaged named profiles equal role expansion from named-profiles.json", async () => {
   const manifest = await packagedManifest();
+  const catalog = await packagedNamedProfiles();
   const profiles = await packagedProfiles(manifest);
   assertProfilesCoverManifest(profiles, manifest);
 
-  assert.deepEqual(Object.keys(profiles.openai), expectedAgents);
-  assert.deepEqual(profiles.openai["sdd-research"], profiles.openai["sdd-explore"]);
-  assert.deepEqual(profiles.grok["sdd-research"], profiles.grok["sdd-explore"]);
+  for (const namedProfile of catalog.profiles) {
+    assert.deepEqual(Object.keys(profiles[namedProfile.name]), expectedAgents);
+    assert.deepEqual(profiles[namedProfile.name], expectedFullProfile(namedProfile));
+  }
 
-  assert.deepEqual(profiles.openai["sdd-research"], { model: "openai-codex/gpt-5.6-sol", thinking: "medium" });
-  assert.deepEqual(profiles.grok["sdd-research"], { model: "xai/grok-4.6", thinking: "xhigh" });
+  assert.deepEqual(profiles.openai, profiles["gpt-5.6-recommended"]);
+  assert.deepEqual(profiles.grok, profiles["grok-recommended"]);
 
   for (const profile of Object.values(profiles)) {
     for (const entry of Object.values(profile)) {
@@ -172,10 +229,10 @@ test("manifest validation rejects unsupported versions, missing groups, duplicat
   })), /duplicate value 'sdd-init'/);
   assert.throws(() => validateManifest(validManifestPatch({
     profiles: [
-      { name: "openai", modelsFile: "models.openai.json" },
-      { name: "openai", modelsFile: "models.openai.json" },
+      { name: "gpt-5.6-recommended", modelsFile: "models.gpt-5.6-recommended.json" },
+      { name: "gpt-5.6-recommended", modelsFile: "models.gpt-5.6-recommended.json" },
     ],
-  })), /duplicate value 'openai'/);
+  })), /duplicate value 'gpt-5.6-recommended'/);
   assert.throws(() => validateManifest(validManifestPatch({
     profiles: [{ name: "status", modelsFile: "models.status.json" }],
     defaultProfile: "status",
@@ -202,56 +259,59 @@ test("profile validation rejects malformed objects, coverage drift, invalid iden
   assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": { model: "provider-only", thinking: "medium" } }), manifest, "badModel"), /provider\/model identifier/);
   assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": { model: "provider/model", thinking: "extreme" } }), manifest, "badEffort"), /must be one of/);
 
-  assert.throws(() => validateProfileSet({ openai: validProfilePatch({}) }, manifest), /missing: grok/);
-  assert.throws(() => validateProfileSet({ openai: validProfilePatch({}), grok: validProfilePatch({}), other: validProfilePatch({}) }, manifest), /extra: other/);
+  assert.throws(() => validateProfileSet({ "gpt-5.6-recommended": validProfilePatch({}) }, manifest), /missing: grok-recommended/);
+  assert.throws(() => validateProfileSet({ "gpt-5.6-recommended": validProfilePatch({}), "grok-recommended": validProfilePatch({}), other: validProfilePatch({}) }, manifest), /extra: other/);
 });
 
-test("opposite-provider judge derivation mixes configured judge agents only", async () => {
+test("opposite-provider judge derivation pairs representative named profiles by provider and cost lane", async () => {
   const manifest = await packagedManifest();
   const profiles = await packagedProfiles(manifest);
-  const openaiEffective = deriveCanonicalProfileForSelection("openai", profiles, manifest);
-  const grokRuntime = deriveRuntimeModelProfilesForSelection("grok", profiles, manifest);
+  const lowCostEffective = deriveCanonicalProfileForSelection("gpt-5.6-low-cost", profiles, manifest);
+  const astraOnlyEffective = deriveCanonicalProfileForSelection("gpt-astra-only-powerful", profiles, manifest);
+  const grokRuntime = deriveRuntimeModelProfilesForSelection("grok-recommended", profiles, manifest);
   const disabledManifest = validateManifest(validManifestPatch({
     oppositeProviderJudges: {
       enabled: false,
       agents: expectedJudgeAgents,
-      profilePairs: { openai: "grok", grok: "openai" },
+      profilePairs: { "gpt-5.6-recommended": "grok-recommended", "grok-recommended": "gpt-5.6-recommended" },
     },
   }));
   const disabledOpenaiProfile = Object.fromEntries(expectedAgents.map((agent) => [agent, { model: `openai/${agent}`, thinking: "medium" }]));
   const disabledGrokProfile = Object.fromEntries(expectedAgents.map((agent) => [agent, { model: `xai/${agent}`, thinking: "xhigh" }]));
   assert.throws(() => validateProfileSet({
-    openai: Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `openai/${agent}`, thinking: "medium" }])),
-    grok: Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `xai/${agent}`, thinking: "xhigh" }])),
+    "gpt-5.6-recommended": Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `openai/${agent}`, thinking: "medium" }])),
+    "grok-recommended": Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `xai/${agent}`, thinking: "xhigh" }])),
   }, disabledManifest), /missing: review-risk/);
   const disabledProfiles = validateProfileSet({
-    openai: disabledOpenaiProfile,
-    grok: disabledGrokProfile,
+    "gpt-5.6-recommended": disabledOpenaiProfile,
+    "grok-recommended": disabledGrokProfile,
   }, disabledManifest);
-  const disabledOpenaiEffective = deriveCanonicalProfileForSelection("openai", disabledProfiles, disabledManifest);
-  const disabledOpenaiRuntime = deriveRuntimeModelProfilesForSelection("openai", disabledProfiles, disabledManifest);
+  const disabledOpenaiEffective = deriveCanonicalProfileForSelection("gpt-5.6-recommended", disabledProfiles, disabledManifest);
+  const disabledOpenaiRuntime = deriveRuntimeModelProfilesForSelection("gpt-5.6-recommended", disabledProfiles, disabledManifest);
 
-  assert.deepEqual(openaiEffective["sdd-init"], profiles.openai["sdd-init"]);
-  assert.deepEqual(openaiEffective["review-risk"], profiles.grok["review-risk"]);
-  assert.deepEqual(grokRuntime["gentle-ai-worker"], { model: profiles.grok["gentle-ai-worker"].model, effort: profiles.grok["gentle-ai-worker"].thinking });
-  assert.deepEqual(grokRuntime["jd-judge-a"], { model: profiles.openai["jd-judge-a"].model, effort: profiles.openai["jd-judge-a"].thinking });
+  assert.deepEqual(lowCostEffective["sdd-init"], profiles["gpt-5.6-low-cost"]["sdd-init"]);
+  assert.deepEqual(lowCostEffective["review-risk"], profiles["grok-low-cost"]["review-risk"]);
+  assert.deepEqual(astraOnlyEffective["review-risk"], profiles["grok-powerful"]["review-risk"]);
+  assert.deepEqual(grokRuntime["gentle-ai-worker"], { model: profiles["grok-recommended"]["gentle-ai-worker"].model, effort: profiles["grok-recommended"]["gentle-ai-worker"].thinking });
+  assert.deepEqual(grokRuntime["jd-judge-a"], { model: profiles["gpt-5.6-recommended"]["jd-judge-a"].model, effort: profiles["gpt-5.6-recommended"]["jd-judge-a"].thinking });
   assert.deepEqual(managedAgents(disabledManifest), expectedAgents);
   assert.deepEqual(disabledOpenaiEffective["review-risk"], { model: "openai/review-risk", thinking: "medium" });
   assert.deepEqual(disabledOpenaiRuntime["jd-judge-a"], { model: "openai/jd-judge-a", effort: "medium" });
-  assert.deepEqual(deriveRuntimeConfigForSelection("openai", profiles, manifest, {
+  assert.deepEqual(deriveRuntimeConfigForSelection("gpt-5.6-recommended", profiles, manifest, {
     model_profiles: { unrelatedAgent: { model: "keep/runtime", effort: "low" } },
   }).model_profiles, {
     unrelatedAgent: { model: "keep/runtime", effort: "low" },
-    ...deriveRuntimeModelProfilesForSelection("openai", profiles, manifest),
+    ...deriveRuntimeModelProfilesForSelection("gpt-5.6-recommended", profiles, manifest),
   });
 });
 
 test("canonical and runtime derivation are pure and map thinking to effort", async () => {
   const manifest = await packagedManifest();
   const profiles = await packagedProfiles(manifest);
-  const canonical = deriveCanonicalProfile(profiles.openai, manifest);
-  const runtimeProfiles = deriveRuntimeModelProfiles(profiles.openai, manifest);
-  const runtimeConfig = deriveRuntimeConfig(profiles.openai, manifest, {
+  const defaultProfile = profiles[manifest.defaultProfile];
+  const canonical = deriveCanonicalProfile(defaultProfile, manifest);
+  const runtimeProfiles = deriveRuntimeModelProfiles(defaultProfile, manifest);
+  const runtimeConfig = deriveRuntimeConfig(defaultProfile, manifest, {
     preserved: true,
     model_profiles: {
       unrelatedAgent: { model: "keep/runtime", effort: "low" },
@@ -259,10 +319,10 @@ test("canonical and runtime derivation are pure and map thinking to effort", asy
     },
   });
 
-  assert.notEqual(canonical, profiles.openai);
-  assert.notEqual(canonical["sdd-research"], profiles.openai["sdd-research"]);
-  assert.deepEqual(canonical, profiles.openai);
-  assert.deepEqual(runtimeProfiles["sdd-research"], { model: "openai-codex/gpt-5.6-sol", effort: "medium" });
+  assert.notEqual(canonical, defaultProfile);
+  assert.notEqual(canonical["sdd-research"], defaultProfile["sdd-research"]);
+  assert.deepEqual(canonical, defaultProfile);
+  assert.deepEqual(runtimeProfiles["sdd-research"], { model: defaultProfile["sdd-research"].model, effort: defaultProfile["sdd-research"].thinking });
   assert.deepEqual(runtimeConfig, {
     preserved: true,
     model_profiles: {
@@ -272,5 +332,5 @@ test("canonical and runtime derivation are pure and map thinking to effort", asy
   });
 
   canonical["sdd-research"].thinking = "low";
-  assert.equal(profiles.openai["sdd-research"].thinking, "medium");
+  assert.equal(defaultProfile["sdd-research"].thinking, "medium");
 });
