@@ -1,6 +1,6 @@
 # Understand how model switching works
 
-`/jb-sdd-odd-models` keeps a human-facing canonical profile and the Gentle Pi runtime mapping aligned for the managed SDD and ODD agents. Profile names and managed agents are read from `gentle-ai/model-profiles.manifest.json`; named profile data lives in `gentle-ai/models.<profile>.json`.
+`/jb-sdd-odd-models` keeps a human-facing canonical profile and the Gentle Pi runtime mapping aligned for the managed SDD/ODD agents and any configured judge/reviewer agents. Profile names, managed agents, and opposite-provider judge routing are read from `gentle-ai/model-profiles.manifest.json`; named profile data lives in `gentle-ai/models.<profile>.json`.
 
 ## Data flow
 
@@ -9,8 +9,9 @@ flowchart LR
   C["/jb-sdd-odd-models <profile>"] --> M["model-profiles.manifest.json"]
   M --> P["models.<profile>.json"]
   P --> V["Validate exact managed-agent profile"]
-  V --> A["gentle-ai/models.json\nmodel + thinking"]
-  V --> R["agent/subagents.json\nmodel_profiles: model + effort"]
+  V --> O["Apply opposite-provider judge routing"]
+  O --> A["gentle-ai/models.json\nmodel + thinking"]
+  O --> R["agent/subagents.json\nmodel_profiles: model + effort"]
   R --> G["Gentle Pi native agent runtime"]
   G --> S["SDD/ODD agent invocation"]
   A --> T["status/preview/doctor detection"]
@@ -33,6 +34,12 @@ Paths are relative to `PI_HOME`, which defaults to `~/.pi`. The extension also i
 | `/jb-sdd-odd-models recover` | Sometimes | Yes, after changed recovery | Finish, record, or clear an interrupted transaction from recorded safe states. |
 
 A switch that is already semantically aligned leaves bytes and mtimes untouched and does not call reload, even if the files use different JSON formatting.
+
+## Opposite-provider judges
+
+The optional `oppositeProviderJudges` manifest block controls mixed judge routing. `enabled` defaults to `true`, but absent or empty `agents` preserves the previous uniform-profile behavior. The packaged manifest explicitly configures these judge/reviewer agents: `review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`.
+
+For the packaged profile pair, selecting `openai` writes normal SDD/ODD agents from `models.openai.json` and judge/reviewer agents from `models.grok.json`; selecting `grok` does the inverse. If a registered profile has no `profilePairs` entry, its judges use that same selected profile.
 
 ## Managed effort mapping
 
@@ -64,7 +71,7 @@ When switching, unrelated top-level keys and unrelated `model_profiles` entries 
 Before status comparison or switching, each registered named profile must:
 
 - be a JSON object;
-- contain exactly the manifest's managed SDD and ODD agent keys; and
+- contain exactly the manifest's active managed SDD/ODD keys plus configured judge/reviewer keys; and
 - give every key string-valued `model` and supported `thinking` fields.
 
 The active runtime file must have an object-valued `model_profiles` property. Existing managed entries in the active canonical/runtime files are validated before a switch. Missing managed entries from older installs, such as newly added `sdd-research`, are repairable during a switch and are added from the selected profile. Malformed existing entries are not repaired silently; the switch stops before writing.

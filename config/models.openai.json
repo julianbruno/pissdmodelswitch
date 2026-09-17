@@ -62,5 +62,29 @@
   "gentle-ai-verify": {
     "model": "openai-codex/gpt-5.6-sol",
     "thinking": "medium"
+  },
+  "review-risk": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
+  },
+  "review-resilience": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
+  },
+  "review-readability": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
+  },
+  "review-reliability": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
+  },
+  "jd-judge-a": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
+  },
+  "jd-judge-b": {
+    "model": "openai-codex/gpt-5.6-sol",
+    "thinking": "medium"
   }
 }

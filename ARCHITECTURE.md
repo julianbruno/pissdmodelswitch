@@ -7,9 +7,9 @@ This package is a small configuration-and-extension layer. It does not bundle Pi
 | Component | Responsibility | Does not own |
 |---|---|---|
 | `extensions/sdd-model-profiles.ts` | Registers `/jb-sdd-odd-models`, validates SDD/ODD profiles through shared helpers, reports status/list/preview/doctor, switches profiles, undoes/recover transactions, and requests reload after changed mutations. | Provider authentication, model execution, model catalog generation, or agent definitions. |
-| `extensions/model-profiles/core.ts` | Owns manifest/profile validation and canonical/runtime derivation. | Pi extension registration. |
+| `extensions/model-profiles/core.ts` | Owns manifest/profile validation, opposite-provider judge selection, and canonical/runtime derivation. | Pi extension registration. |
 | `extensions/model-profiles/transaction.ts` | Owns read/write transaction locking, active journal, history, guarded undo, recovery, and read-only inspection diagnostics. | Choosing model profiles or repairing malformed state automatically. |
-| `config/model-profiles.manifest.json` | Defines schema version, managed agent groups, default profile, reserved command names, and registered profile files. | Runtime behavior. |
+| `config/model-profiles.manifest.json` | Defines schema version, managed agent groups, opposite-provider judge routing, default profile, reserved command names, and registered profile files. | Runtime behavior outside declared mappings. |
 | `config/models.<profile>.json` | Defines each named canonical model profile; active files are derived from the manifest default at install time. | Runtime behavior or user overrides. |
 | `install/install.sh` and `install/model-profiles-install.ts` | Enforce the Node strip-types minimum, validate assets, back up changed targets, install extension/helper layout, and perform a merge-friendly runtime update. | Installing Gentle Pi, credentials, or providers. |
 | Documentation | Explains operation, recovery, and limitations. | A license grant; see `NOTICE.md`. |
@@ -37,7 +37,7 @@ Provider authentication/model catalog
 
 ## Installation boundary
 
-The installer writes only beneath `PI_HOME` at installation time. It validates the versioned manifest and every registered profile before writing, derives active `models.json` and merged `subagents.json` entries from the default named profile, preserves unrelated JSON keys, and creates timestamped backups for existing targets whose content changes. It also installs `extensions/model-profiles/core.ts` and `extensions/model-profiles/transaction.ts` next to the command extension, which is required for the installed command to load.
+The installer writes only beneath `PI_HOME` at installation time. It validates the versioned manifest and every registered profile before writing, derives active `models.json` and merged `subagents.json` entries from the default named profile using the same opposite-provider judge logic as the command, preserves unrelated JSON keys, and creates timestamped backups for existing targets whose content changes. It also installs `extensions/model-profiles/core.ts` and `extensions/model-profiles/transaction.ts` next to the command extension, which is required for the installed command to load.
 
 The packaged extension resolves Pi home from `PI_HOME` when set, otherwise retaining `~/.pi` behavior. A custom value must be exported into the Pi process as well as the installer process.
 
@@ -51,6 +51,7 @@ The packaged extension resolves Pi home from `PI_HOME` when set, otherwise retai
 - Model identifiers are static snapshots and can become unavailable or renamed by providers.
 - Installation validates file shape, not credentials or remote model availability.
 - `doctor` can report local catalog/auth evidence, but it cannot establish provider execution or account entitlement.
+- Opposite-provider judge routing is manifest-driven; absent, empty, or disabled judge configuration preserves the previous uniform-profile behavior.
 - Installed/global status does not prove effective project routing when project overrides or scoped models are active.
 - The two target files are replaced atomically per file, not as an atomic pair.
 - Recovery refuses unknown bytes from noncooperating writers rather than overwriting them.

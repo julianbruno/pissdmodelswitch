@@ -7,7 +7,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
-import { deriveCanonicalProfile, deriveRuntimeModelProfiles, managedAgents, validateManifest, validateProfileSet } from "../extensions/model-profiles/core.ts";
+import { deriveCanonicalProfileForSelection, deriveRuntimeModelProfilesForSelection, validateManifest, validateProfileSet } from "../extensions/model-profiles/core.ts";
 import { installModelProfiles } from "../install/model-profiles-install.ts";
 
 const execFileAsync = promisify(execFile);
@@ -76,7 +76,7 @@ async function expectedDefaultFrom(packageRoot = ".") {
     inputs[profile.name] = await readJson(join(packageRoot, "config", profile.modelsFile));
   }
   const profiles = validateProfileSet(inputs, manifest);
-  return { manifest, profile: profiles[manifest.defaultProfile] };
+  return { manifest, profiles, profile: profiles[manifest.defaultProfile] };
 }
 
 async function runInstall(packageRoot: string, piHome: string) {
@@ -99,11 +99,11 @@ exec ${JSON.stringify(process.execPath)} "$@"
 }
 
 test("packaged duplicate active and seed files are eliminated after equivalence proof", async () => {
-  const { manifest, profile } = await expectedDefaultFrom();
-  assert.deepEqual(deriveCanonicalProfile(profile, manifest), profile);
-  assert.deepEqual(deriveRuntimeModelProfiles(profile, manifest)["sdd-research"], {
-    model: profile["sdd-research"].model,
-    effort: profile["sdd-research"].thinking,
+  const { manifest, profiles } = await expectedDefaultFrom();
+  assert.deepEqual(deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest)["sdd-research"], profiles.openai["sdd-research"]);
+  assert.deepEqual(deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest)["sdd-research"], {
+    model: profiles.openai["sdd-research"].model,
+    effort: profiles.openai["sdd-research"].thinking,
   });
   assert.equal(await exists("config/models.json"), false);
   assert.equal(await exists("config/subagents.seed.json"), false);
@@ -137,15 +137,16 @@ test("malformed manifest or registered profile fails before any target mutation"
 test("fresh temp install copies manifest, registered profiles, extension helpers, and derived default active files", async () => {
   const piHome = await preparePiHome("installer-fresh");
   const result = await runInstall(".", piHome);
-  const { manifest, profile } = await expectedDefaultFrom();
+  const { manifest, profiles } = await expectedDefaultFrom();
 
   assert.equal(result.changed, true);
   assert.deepEqual(await readJson(join(piHome, "gentle-ai", "model-profiles.manifest.json")), manifest);
   for (const registration of manifest.profiles) {
     assert.deepEqual(await readJson(join(piHome, "gentle-ai", registration.modelsFile)), await readJson(join("config", registration.modelsFile)));
   }
-  assert.deepEqual(await readJson(join(piHome, "gentle-ai", "models.json")), deriveCanonicalProfile(profile, manifest));
-  assert.deepEqual((await readJson(join(piHome, "agent", "subagents.json"))).model_profiles, deriveRuntimeModelProfiles(profile, manifest));
+  assert.deepEqual(await readJson(join(piHome, "gentle-ai", "models.json")), deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest));
+  assert.deepEqual((await readJson(join(piHome, "agent", "subagents.json"))).model_profiles, deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest));
+  assert.deepEqual((await readJson(join(piHome, "gentle-ai", "models.json")))["review-risk"], profiles.grok["review-risk"]);
   assert.equal(await exists(join(piHome, "agent", "extensions", "sdd-model-profiles.ts")), true);
   assert.equal(await exists(join(piHome, "agent", "extensions", "model-profiles", "core.ts")), true);
   assert.equal(await exists(join(piHome, "agent", "extensions", "model-profiles", "transaction.ts")), true);

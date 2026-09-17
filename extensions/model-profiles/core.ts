@@ -1,5 +1,13 @@
 export const SUPPORTED_SCHEMA_VERSION = 1;
 export const REQUIRED_MANAGED_AGENT_GROUPS = ["sdd", "odd"] as const;
+export const KNOWN_OPPOSITE_PROVIDER_JUDGES = [
+  "review-risk",
+  "review-resilience",
+  "review-readability",
+  "review-reliability",
+  "jd-judge-a",
+  "jd-judge-b",
+] as const;
 export const SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"] as const;
 export const RESERVED_COMMAND_NAMES = ["status", "list", "preview", "doctor", "undo", "recover"] as const;
 
@@ -22,11 +30,18 @@ export type ProfileRegistration = {
   modelsFile: string;
 };
 
+export type OppositeProviderJudgesConfig = {
+  enabled: boolean;
+  agents: string[];
+  profilePairs: Record<string, string>;
+};
+
 export type ModelProfilesManifest = {
   schemaVersion: typeof SUPPORTED_SCHEMA_VERSION;
   defaultProfile: string;
   managedAgentGroups: Record<ManagedAgentGroupName, string[]>;
   reservedCommandNames: string[];
+  oppositeProviderJudges: OppositeProviderJudgesConfig;
   profiles: ProfileRegistration[];
 };
 
@@ -37,6 +52,7 @@ const safeNamePattern = /^[a-z][a-z0-9-]*$/;
 const providerModelPattern = /^[^/\s]+\/[^/\s]+$/;
 const supportedEffortSet = new Set<string>(SUPPORTED_EFFORTS);
 const builtInReservedCommandSet = new Set<string>(RESERVED_COMMAND_NAMES);
+const knownOppositeProviderJudgeSet = new Set<string>(KNOWN_OPPOSITE_PROVIDER_JUDGES);
 
 export class ModelProfileValidationError extends Error {
   constructor(message: string) {
@@ -60,6 +76,11 @@ function assertJsonObject(value: unknown, label: string): JsonObject {
 
 function assertString(value: unknown, label: string): string {
   if (typeof value !== "string") fail(`${label} must be a string.`);
+  return value;
+}
+
+function assertBoolean(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") fail(`${label} must be a boolean.`);
   return value;
 }
 
@@ -126,6 +147,44 @@ function assertManifestReservedNames(value: unknown): string[] {
   return reserved;
 }
 
+function assertOppositeProviderJudges(
+  value: unknown,
+  managedAgentGroups: Record<ManagedAgentGroupName, string[]>,
+  profileNames: readonly string[],
+): OppositeProviderJudgesConfig {
+  if (value === undefined) return { enabled: true, agents: [], profilePairs: {} };
+  const object = assertJsonObject(value, "oppositeProviderJudges");
+  const expectedKeys = new Set(["enabled", "agents", "profilePairs"]);
+  const extra = objectKeys(object).filter((key) => !expectedKeys.has(key));
+  if (extra.length) fail(`oppositeProviderJudges contains unsupported key${extra.length === 1 ? "" : "s"}: ${extra.join(", ")}.`);
+
+  const enabled = object.enabled === undefined ? true : assertBoolean(object.enabled, "oppositeProviderJudges.enabled");
+  const agents = object.agents === undefined ? [] : assertStringArray(object.agents, "oppositeProviderJudges.agents");
+  for (const [index, agent] of agents.entries()) {
+    assertSafeName(agent, `oppositeProviderJudges.agents[${index}]`);
+    if (!knownOppositeProviderJudgeSet.has(agent)) fail(`oppositeProviderJudges.agents[${index}] must be a known judge/reviewer agent.`);
+  }
+  assertUnique(agents, "oppositeProviderJudges.agents");
+  const groupedAgents = new Set(Object.values(managedAgentGroups).flat());
+  for (const agent of agents) {
+    if (groupedAgents.has(agent)) fail(`oppositeProviderJudges.agents contains managed agent '${agent}'.`);
+  }
+
+  const profilePairsInput = object.profilePairs === undefined ? {} : assertJsonObject(object.profilePairs, "oppositeProviderJudges.profilePairs");
+  const profileNameSet = new Set(profileNames);
+  const profilePairs: Record<string, string> = {};
+  for (const [source, targetValue] of Object.entries(profilePairsInput)) {
+    assertSafeName(source, `oppositeProviderJudges.profilePairs.${source}`);
+    const target = assertString(targetValue, `oppositeProviderJudges.profilePairs.${source}`);
+    assertSafeName(target, `oppositeProviderJudges.profilePairs.${source}`);
+    if (!profileNameSet.has(source)) fail(`oppositeProviderJudges.profilePairs source '${source}' is not registered.`);
+    if (!profileNameSet.has(target)) fail(`oppositeProviderJudges.profilePairs target '${target}' is not registered.`);
+    profilePairs[source] = target;
+  }
+
+  return { enabled, agents, profilePairs };
+}
+
 function assertManagedAgentGroups(value: unknown): Record<ManagedAgentGroupName, string[]> {
   const groups = assertJsonObject(value, "managedAgentGroups");
   exactKeys(groups, [...REQUIRED_MANAGED_AGENT_GROUPS], "managedAgentGroups");
@@ -144,8 +203,20 @@ function assertManagedAgentGroups(value: unknown): Record<ManagedAgentGroupName,
   return result;
 }
 
-export function managedAgents(manifest: ModelProfilesManifest): string[] {
+export function managedAgentGroups(manifest: ModelProfilesManifest): string[] {
   return REQUIRED_MANAGED_AGENT_GROUPS.flatMap((groupName) => manifest.managedAgentGroups[groupName]);
+}
+
+export function configuredOppositeProviderJudgeAgents(manifest: ModelProfilesManifest): string[] {
+  return manifest.oppositeProviderJudges.agents;
+}
+
+export function activeOppositeProviderJudgeAgents(manifest: ModelProfilesManifest): string[] {
+  return manifest.oppositeProviderJudges.enabled ? configuredOppositeProviderJudgeAgents(manifest) : [];
+}
+
+export function managedAgents(manifest: ModelProfilesManifest): string[] {
+  return [...managedAgentGroups(manifest), ...configuredOppositeProviderJudgeAgents(manifest)];
 }
 
 export function registeredProfileNames(manifest: ModelProfilesManifest): string[] {
@@ -173,6 +244,8 @@ export function validateManifest(input: unknown): ModelProfilesManifest {
     if (reserved.has(name)) fail(`profile name '${name}' is reserved for commands.`);
   }
 
+  const oppositeProviderJudges = assertOppositeProviderJudges(object.oppositeProviderJudges, managedAgentGroups, profileNames);
+
   const defaultProfile = assertString(object.defaultProfile, "defaultProfile");
   assertSafeName(defaultProfile, "defaultProfile");
   if (!profileNames.includes(defaultProfile)) fail(`defaultProfile '${defaultProfile}' is not registered.`);
@@ -182,6 +255,7 @@ export function validateManifest(input: unknown): ModelProfilesManifest {
     defaultProfile,
     managedAgentGroups,
     reservedCommandNames,
+    oppositeProviderJudges,
     profiles,
   };
 }
@@ -234,6 +308,40 @@ export function deriveRuntimeConfig(profile: ValidatedModelProfile, manifest: Mo
       ...deriveRuntimeModelProfiles(profile, manifest),
     },
   };
+}
+
+export function deriveCanonicalProfileForSelection(
+  profileName: string,
+  profiles: Record<string, ValidatedModelProfile>,
+  manifest: ModelProfilesManifest,
+): ValidatedModelProfile {
+  const selected = profiles[profileName];
+  if (!selected) fail(`profile '${profileName}' is not registered.`);
+  const oppositeName = manifest.oppositeProviderJudges.enabled ? manifest.oppositeProviderJudges.profilePairs[profileName] : undefined;
+  const opposite = oppositeName ? profiles[oppositeName] : undefined;
+  const judgeAgents = new Set(activeOppositeProviderJudgeAgents(manifest));
+
+  return Object.fromEntries(managedAgents(manifest).map((agent) => {
+    const source = judgeAgents.has(agent) && opposite ? opposite : selected;
+    return [agent, { ...source[agent] }];
+  }));
+}
+
+export function deriveRuntimeModelProfilesForSelection(
+  profileName: string,
+  profiles: Record<string, ValidatedModelProfile>,
+  manifest: ModelProfilesManifest,
+): RuntimeModelProfiles {
+  return deriveRuntimeModelProfiles(deriveCanonicalProfileForSelection(profileName, profiles, manifest), manifest);
+}
+
+export function deriveRuntimeConfigForSelection(
+  profileName: string,
+  profiles: Record<string, ValidatedModelProfile>,
+  manifest: ModelProfilesManifest,
+  base: JsonObject = {},
+): JsonObject {
+  return deriveRuntimeConfig(deriveCanonicalProfileForSelection(profileName, profiles, manifest), manifest, base);
 }
 
 export function assertProfilesCoverManifest(profileByName: Record<string, ValidatedModelProfile>, manifest: ModelProfilesManifest): void {

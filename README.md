@@ -1,6 +1,6 @@
 # Switch SDD/ODD model profiles safely
 
-This portable package installs the `/jb-sdd-odd-models` Pi command, helper modules, and a versioned model-profile manifest for SDD phase agents plus core ODD generic agents. The manifest is the source of truth: it defines the managed agent groups, registered profile files, reserved command names, and default profile.
+This portable package installs the `/jb-sdd-odd-models` Pi command, helper modules, and a versioned model-profile manifest for SDD phase agents plus core ODD generic agents. The manifest is the source of truth: it defines the managed agent groups, optional opposite-provider judge routing, registered profile files, reserved command names, and default profile.
 
 The installer derives active runtime files from the default named profile, preserves unrelated configuration, and backs up every existing file it changes.
 
@@ -35,6 +35,8 @@ PI_HOME=/path/to/pi-home pi
 
 ## Scope
 
-The command manages every agent named in `config/model-profiles.manifest.json`. The current manifest covers SDD phase agents, including `sdd-research`, and ODD generic agents: `gentle-ai-explore`, `gentle-ai-worker`, and `gentle-ai-verify`.
+The command manages every agent named in `config/model-profiles.manifest.json`. The current manifest covers SDD phase agents, including `sdd-research`, ODD generic agents (`gentle-ai-explore`, `gentle-ai-worker`, and `gentle-ai-verify`), and configured judge/reviewer agents (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`).
+
+By default, judge/reviewer agents use the opposite configured provider pair: selecting `openai` routes judges to the `grok` profile, and selecting `grok` routes judges to the `openai` profile. Manifests without configured judge agents keep the previous uniform-profile behavior.
 
 It writes only the managed keys in the installed canonical and runtime mappings. Unrelated top-level JSON keys and unrelated `model_profiles` entries are preserved and reported by `doctor` rather than treated as errors.

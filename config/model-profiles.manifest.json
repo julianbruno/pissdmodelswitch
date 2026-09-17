@@ -31,6 +31,21 @@
     "undo",
     "recover"
   ],
+  "oppositeProviderJudges": {
+    "enabled": true,
+    "agents": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability",
+      "jd-judge-a",
+      "jd-judge-b"
+    ],
+    "profilePairs": {
+      "openai": "grok",
+      "grok": "openai"
+    }
+  },
   "profiles": [
     {
       "name": "openai",

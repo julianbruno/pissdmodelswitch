@@ -20,10 +20,26 @@ type FakeCommandContext = {
   reload(): Promise<void>;
 };
 
-const agents = ["sdd-init", "sdd-explore", "sdd-research", "gentle-ai-worker"];
+const normalAgents = ["sdd-init", "sdd-explore", "sdd-research", "gentle-ai-worker"];
+const judgeAgents = ["review-risk", "review-resilience", "review-readability", "review-reliability", "jd-judge-a", "jd-judge-b"];
+const agents = [...normalAgents, ...judgeAgents];
 
 function profile(modelPrefix: string, effort = "high"): Record<string, { model: string; thinking: string }> {
   return Object.fromEntries(agents.map((agent) => [agent, { model: `${modelPrefix}/${agent}`, thinking: effort }]));
+}
+
+function selectedProfile(activePrefix: string, activeEffort: string, oppositePrefix: string, oppositeEffort: string): Record<string, { model: string; thinking: string }> {
+  return Object.fromEntries([
+    ...normalAgents.map((agent) => [agent, { model: `${activePrefix}/${agent}`, thinking: activeEffort }]),
+    ...judgeAgents.map((agent) => [agent, { model: `${oppositePrefix}/${agent}`, thinking: oppositeEffort }]),
+  ]);
+}
+
+function selectedRuntime(activePrefix: string, activeEffort: string, oppositePrefix: string, oppositeEffort: string): Record<string, { model: string; effort: string }> {
+  return Object.fromEntries([
+    ...normalAgents.map((agent) => [agent, { model: `${activePrefix}/${agent}`, effort: activeEffort }]),
+    ...judgeAgents.map((agent) => [agent, { model: `${oppositePrefix}/${agent}`, effort: oppositeEffort }]),
+  ]);
 }
 
 async function readJson(path: string): Promise<any> {
@@ -65,6 +81,11 @@ async function createHarness() {
     defaultProfile: "openai",
     managedAgentGroups: { sdd: ["sdd-init", "sdd-explore", "sdd-research"], odd: ["gentle-ai-worker"] },
     reservedCommandNames: ["status", "list", "preview", "doctor", "undo", "recover"],
+    oppositeProviderJudges: {
+      enabled: true,
+      agents: judgeAgents,
+      profilePairs: { openai: "grok", grok: "openai" },
+    },
     profiles: [
       { name: "openai", modelsFile: "models.openai.json" },
       { name: "grok", modelsFile: "models.grok.json" },
@@ -76,10 +97,10 @@ async function createHarness() {
   await writeJson(join(gentleDir, "models.openai.json"), profile("openai-codex", "high"));
   await writeJson(join(gentleDir, "models.grok.json"), profile("xai", "xhigh"));
   await writeJson(join(gentleDir, "models.local.json"), profile("local", "medium"));
-  await writeJson(join(gentleDir, "models.json"), { ...profile("openai-codex", "high"), unmanagedCanonical: { model: "keep/me", thinking: "low" } });
+  await writeJson(join(gentleDir, "models.json"), { ...selectedProfile("openai-codex", "high", "xai", "xhigh"), unmanagedCanonical: { model: "keep/me", thinking: "low" } });
   await writeJson(join(agentDir, "subagents.json"), {
     model_profiles: {
-      ...Object.fromEntries(agents.map((agent) => [agent, { model: `openai-codex/${agent}`, effort: "high" }])),
+      ...selectedRuntime("openai-codex", "high", "xai", "xhigh"),
       unrelatedAgent: { model: "keep/runtime", effort: "low" },
     },
     unrelatedTopLevel: true,
@@ -142,6 +163,30 @@ test("registered command uses manifest profiles for completion, list, preview, a
   assert.equal(runtime.unrelatedTopLevel, true);
   assert.deepEqual(canonical["sdd-research"], { model: "local/sdd-research", thinking: "medium" });
   assert.deepEqual(runtime.model_profiles["sdd-research"], { model: "local/sdd-research", effort: "medium" });
+});
+
+test("status, preview, and switch use opposite-provider mappings for configured judges", async () => {
+  const harness = await createHarness();
+
+  await harness.command.handler("status", harness.ctx);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /Active SDD\/ODD profile: openai/);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /review-risk: xai\/review-risk \(xhigh\)/);
+
+  await harness.command.handler("preview grok", harness.ctx);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /sdd-init: canonical .*openai-codex\/sdd-init.* -> .*xai\/sdd-init/s);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /review-risk: canonical .*xai\/review-risk.* -> .*openai-codex\/review-risk/s);
+
+  await harness.command.handler("grok", harness.ctx);
+  assert.equal(harness.reloadCount(), 1);
+  const canonical = await readJson(harness.canonicalPath);
+  const runtime = await readJson(harness.runtimePath);
+  assert.deepEqual(canonical["sdd-init"], { model: "xai/sdd-init", thinking: "xhigh" });
+  assert.deepEqual(runtime.model_profiles["sdd-init"], { model: "xai/sdd-init", effort: "xhigh" });
+  assert.deepEqual(canonical["review-risk"], { model: "openai-codex/review-risk", thinking: "high" });
+  assert.deepEqual(runtime.model_profiles["review-risk"], { model: "openai-codex/review-risk", effort: "high" });
+
+  await harness.command.handler("status", harness.ctx);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /Active SDD\/ODD profile: grok/);
 });
 
 test("fresh aligned switch leaves complete fixture tree unchanged with no history", async () => {

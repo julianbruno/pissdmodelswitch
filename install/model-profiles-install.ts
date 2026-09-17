@@ -5,8 +5,8 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 import {
   assertProfilesCoverManifest,
-  deriveCanonicalProfile,
-  deriveRuntimeConfig,
+  deriveCanonicalProfileForSelection,
+  deriveRuntimeConfigForSelection,
   isJsonObject,
   validateManifest,
   validateProfileSet,
@@ -146,8 +146,14 @@ function planInstall(options: {
   const defaultProfile = options.registry.profiles[options.registry.manifest.defaultProfile];
   if (!defaultProfile) fail(`Default profile '${options.registry.manifest.defaultProfile}' is not available.`);
 
-  const canonical = { ...(options.canonicalBase ?? {}), ...deriveCanonicalProfile(defaultProfile, options.registry.manifest) };
-  const runtime = deriveRuntimeConfig(defaultProfile, options.registry.manifest, assertRuntimeBase(options.runtimeBase, join(options.piHome, "agent", "subagents.json")));
+  const defaultProfileName = options.registry.manifest.defaultProfile;
+  const canonical = { ...(options.canonicalBase ?? {}), ...deriveCanonicalProfileForSelection(defaultProfileName, options.registry.profiles, options.registry.manifest) };
+  const runtime = deriveRuntimeConfigForSelection(
+    defaultProfileName,
+    options.registry.profiles,
+    options.registry.manifest,
+    assertRuntimeBase(options.runtimeBase, join(options.piHome, "agent", "subagents.json")),
+  );
 
   const plans: Plan[] = [
     { path: join(gentleDir, "model-profiles.manifest.json"), content: options.registry.sourceText.get("config/model-profiles.manifest.json")!, mode: configMode },

@@ -6,9 +6,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import {
   SUPPORTED_EFFORTS,
-  deriveCanonicalProfile,
-  deriveRuntimeConfig,
-  deriveRuntimeModelProfiles,
+  deriveCanonicalProfileForSelection,
+  deriveRuntimeConfigForSelection,
+  deriveRuntimeModelProfilesForSelection,
   isJsonObject,
   managedAgents,
   registeredProfileNames,
@@ -19,7 +19,6 @@ import {
   type ModelProfileEntry,
   type ModelProfilesManifest,
   type RuntimeModelProfileEntry,
-  type RuntimeModelProfiles,
   type ValidatedModelProfile,
 } from "./model-profiles/core.ts";
 import {
@@ -263,7 +262,7 @@ async function statusText(paths: ResolvedPaths, includeUsage = false): Promise<s
     let active = "custom";
     for (const name of registeredProfileNames(registry.manifest)) {
       const profile = selectedProfile(registry, name);
-      if (profile && profileMatchesState(state, profile, registry.manifest)) active = name;
+      if (profile && profileMatchesState(state, deriveCanonicalProfileForSelection(name, registry.profiles, registry.manifest), registry.manifest)) active = name;
     }
 
     const mapping = managedAgents(registry.manifest).map((agent) => {
@@ -294,10 +293,11 @@ async function previewText(paths: ResolvedPaths, name: string): Promise<string> 
   if (!profile) return `Unknown profile: ${name}\n${usage(registry.manifest)}`;
 
   const state = await readActiveState(paths, registry.manifest, true);
-  const nextRuntimeProfiles = deriveRuntimeModelProfiles(profile, registry.manifest);
+  const nextProfile = deriveCanonicalProfileForSelection(name, registry.profiles, registry.manifest);
+  const nextRuntimeProfiles = deriveRuntimeModelProfilesForSelection(name, registry.profiles, registry.manifest);
   const lines = [`Preview SDD/ODD profile: ${name}`, "No files will be written."];
   for (const agent of managedAgents(registry.manifest)) {
-    const afterCanonical = profile[agent];
+    const afterCanonical = nextProfile[agent];
     const afterRuntime = nextRuntimeProfiles[agent];
     lines.push(
       `${agent}: canonical ${formatCanonicalEntry(state.canonicalEntries[agent])} -> ${formatCanonicalEntry(afterCanonical)}; runtime ${formatRuntimeEntry(state.runtimeEntries[agent])} -> ${formatRuntimeEntry(afterRuntime)}`,
@@ -407,7 +407,7 @@ async function doctorText(paths: ResolvedPaths, ctx: DoctorCommandContext): Prom
         active = "custom";
         for (const name of registeredProfileNames(registry.manifest)) {
           const profile = selectedProfile(registry, name);
-          if (profile && profileMatchesState(state, profile, registry.manifest)) active = name;
+          if (profile && profileMatchesState(state, deriveCanonicalProfileForSelection(name, registry.profiles, registry.manifest), registry.manifest)) active = name;
         }
       }
       info.push(`Active SDD/ODD profile: ${active}`);
@@ -524,7 +524,8 @@ async function switchProfile(paths: ResolvedPaths, name: string): Promise<"chang
 
   const targets = transactionTargets(paths);
   const preflightState = await readActiveState(paths, registry.manifest, true);
-  if (profileMatchesState(preflightState, profile, registry.manifest)) {
+  const selectedCanonicalProfile = deriveCanonicalProfileForSelection(name, registry.profiles, registry.manifest);
+  if (profileMatchesState(preflightState, selectedCanonicalProfile, registry.manifest)) {
     assertNoTransactionHazardForNoop(await inspectModelProfileTransactions(targets));
     return "noop";
   }
@@ -539,10 +540,11 @@ async function switchProfile(paths: ResolvedPaths, name: string): Promise<"chang
         { allowMissingManagedEntries: true },
       );
 
-      if (profileMatchesState(state, profile, registry.manifest)) return null;
+      const nextProfile = deriveCanonicalProfileForSelection(name, registry.profiles, registry.manifest);
+      if (profileMatchesState(state, nextProfile, registry.manifest)) return null;
 
-      const nextCanonical: JsonObject = { ...state.canonical, ...deriveCanonicalProfile(profile, registry.manifest) };
-      const nextRuntime = deriveRuntimeConfig(profile, registry.manifest, state.runtime);
+      const nextCanonical: JsonObject = { ...state.canonical, ...nextProfile };
+      const nextRuntime = deriveRuntimeConfigForSelection(name, registry.profiles, registry.manifest, state.runtime);
       runtimeProfilesObject(nextRuntime);
       return { canonicalContent: serialized(nextCanonical), runtimeContent: serialized(nextRuntime) };
     },

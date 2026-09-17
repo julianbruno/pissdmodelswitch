@@ -24,10 +24,10 @@ The installer writes:
 - helper modules under `~/.pi/agent/extensions/model-profiles/`
 - `~/.pi/gentle-ai/model-profiles.manifest.json`
 - every profile registered by that manifest, such as `models.openai.json` and `models.grok.json`
-- derived active `~/.pi/gentle-ai/models.json` from the manifest default profile
-- the merged managed entries in `~/.pi/agent/subagents.json`
+- derived active `~/.pi/gentle-ai/models.json` from the manifest default profile, including opposite-provider judge entries when configured
+- the merged managed entries in `~/.pi/agent/subagents.json`, using the same effective mixed profile
 
-Existing unrelated canonical keys, unrelated top-level runtime keys, and unrelated `model_profiles` entries in `subagents.json` are preserved. Re-running the installer is safe: identical files are left unchanged and no backup is created.
+Existing unrelated canonical keys, unrelated top-level runtime keys, and unrelated `model_profiles` entries in `subagents.json` are preserved. Re-running the installer is safe: identical files are left unchanged and no backup is created. With the packaged manifest, the default `openai` install routes configured judge/reviewer agents to the `grok` profile unless `oppositeProviderJudges` is disabled or has no agents.
 
 ### Custom Pi home
 
@@ -70,7 +70,7 @@ If Pi does not recognize the command, verify that Gentle Pi loads TypeScript ext
 
 ## Add or install a third profile
 
-The manifest is the source of truth. To add a profile such as `local`, add it to `model-profiles.manifest.json`, create `models.local.json`, and include exactly the same managed agents as the existing profiles. Then reinstall so the new manifest/profile file is copied into Pi home.
+The manifest is the source of truth. To add a profile such as `local`, add it to `model-profiles.manifest.json`, create `models.local.json`, and include exactly the same active managed agents as the existing profiles, including configured judge/reviewer agents. Then reinstall so the new manifest/profile file is copied into Pi home. A profile without an `oppositeProviderJudges.profilePairs` entry uses its own models for judges.
 
 After reinstalling, verify:
 

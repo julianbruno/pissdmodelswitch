@@ -62,5 +62,29 @@
   "gentle-ai-verify": {
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
+  },
+  "review-risk": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "review-resilience": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "review-readability": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "review-reliability": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "jd-judge-a": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "jd-judge-b": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
   }
 }

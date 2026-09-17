@@ -7,8 +7,11 @@ import {
   SUPPORTED_EFFORTS,
   assertProfilesCoverManifest,
   deriveCanonicalProfile,
+  deriveCanonicalProfileForSelection,
   deriveRuntimeConfig,
+  deriveRuntimeConfigForSelection,
   deriveRuntimeModelProfiles,
+  deriveRuntimeModelProfilesForSelection,
   managedAgents,
   registeredProfileNames,
   validateManifest,
@@ -34,7 +37,16 @@ const expectedSddAgents = [
   "sdd-sync",
 ];
 const expectedOddAgents = ["gentle-ai-explore", "gentle-ai-worker", "gentle-ai-verify"];
-const expectedAgents = [...expectedSddAgents, ...expectedOddAgents];
+const expectedJudgeAgents = [
+  "review-risk",
+  "review-resilience",
+  "review-readability",
+  "review-reliability",
+  "jd-judge-a",
+  "jd-judge-b",
+];
+const expectedAgents = [...expectedSddAgents, ...expectedOddAgents, ...expectedJudgeAgents];
+const expectedNonJudgeAgents = [...expectedSddAgents, ...expectedOddAgents];
 
 async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8"));
@@ -60,6 +72,14 @@ function validManifestPatch(patch: Record<string, unknown>): unknown {
       odd: expectedOddAgents,
     },
     reservedCommandNames: [...RESERVED_COMMAND_NAMES],
+    oppositeProviderJudges: {
+      enabled: true,
+      agents: expectedJudgeAgents,
+      profilePairs: {
+        openai: "grok",
+        grok: "openai",
+      },
+    },
     profiles: [
       { name: "openai", modelsFile: "models.openai.json" },
       { name: "grok", modelsFile: "models.grok.json" },
@@ -85,12 +105,43 @@ test("packaged manifest registers versioned profiles and complete managed agent 
     odd: expectedOddAgents,
   });
   assert.deepEqual(manifest.reservedCommandNames, [...RESERVED_COMMAND_NAMES]);
+  assert.deepEqual(manifest.oppositeProviderJudges, {
+    enabled: true,
+    agents: expectedJudgeAgents,
+    profilePairs: {
+      openai: "grok",
+      grok: "openai",
+    },
+  });
   assert.deepEqual(manifest.profiles, [
     { name: "openai", modelsFile: "models.openai.json" },
     { name: "grok", modelsFile: "models.grok.json" },
   ]);
   assert.deepEqual(managedAgents(manifest), expectedAgents);
   assert.deepEqual(registeredProfileNames(manifest), ["openai", "grok"]);
+});
+
+test("manifests without configured opposite-provider judges preserve legacy managed coverage", () => {
+  const legacyManifest = validateManifest({
+    schemaVersion: 1,
+    defaultProfile: "openai",
+    managedAgentGroups: {
+      sdd: expectedSddAgents,
+      odd: expectedOddAgents,
+    },
+    reservedCommandNames: [...RESERVED_COMMAND_NAMES],
+    profiles: [
+      { name: "openai", modelsFile: "models.openai.json" },
+      { name: "grok", modelsFile: "models.grok.json" },
+    ],
+  });
+
+  assert.deepEqual(legacyManifest.oppositeProviderJudges, { enabled: true, agents: [], profilePairs: {} });
+  assert.deepEqual(managedAgents(legacyManifest), expectedNonJudgeAgents);
+
+  const emptyJudgesManifest = validateManifest(validManifestPatch({ oppositeProviderJudges: { agents: [] } }));
+  assert.deepEqual(emptyJudgesManifest.oppositeProviderJudges, { enabled: true, agents: [], profilePairs: {} });
+  assert.deepEqual(managedAgents(emptyJudgesManifest), expectedNonJudgeAgents);
 });
 
 test("named packaged profiles contain sdd-research matching sdd-explore and exact managed coverage", async () => {
@@ -153,6 +204,46 @@ test("profile validation rejects malformed objects, coverage drift, invalid iden
 
   assert.throws(() => validateProfileSet({ openai: validProfilePatch({}) }, manifest), /missing: grok/);
   assert.throws(() => validateProfileSet({ openai: validProfilePatch({}), grok: validProfilePatch({}), other: validProfilePatch({}) }, manifest), /extra: other/);
+});
+
+test("opposite-provider judge derivation mixes configured judge agents only", async () => {
+  const manifest = await packagedManifest();
+  const profiles = await packagedProfiles(manifest);
+  const openaiEffective = deriveCanonicalProfileForSelection("openai", profiles, manifest);
+  const grokRuntime = deriveRuntimeModelProfilesForSelection("grok", profiles, manifest);
+  const disabledManifest = validateManifest(validManifestPatch({
+    oppositeProviderJudges: {
+      enabled: false,
+      agents: expectedJudgeAgents,
+      profilePairs: { openai: "grok", grok: "openai" },
+    },
+  }));
+  const disabledOpenaiProfile = Object.fromEntries(expectedAgents.map((agent) => [agent, { model: `openai/${agent}`, thinking: "medium" }]));
+  const disabledGrokProfile = Object.fromEntries(expectedAgents.map((agent) => [agent, { model: `xai/${agent}`, thinking: "xhigh" }]));
+  assert.throws(() => validateProfileSet({
+    openai: Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `openai/${agent}`, thinking: "medium" }])),
+    grok: Object.fromEntries(expectedNonJudgeAgents.map((agent) => [agent, { model: `xai/${agent}`, thinking: "xhigh" }])),
+  }, disabledManifest), /missing: review-risk/);
+  const disabledProfiles = validateProfileSet({
+    openai: disabledOpenaiProfile,
+    grok: disabledGrokProfile,
+  }, disabledManifest);
+  const disabledOpenaiEffective = deriveCanonicalProfileForSelection("openai", disabledProfiles, disabledManifest);
+  const disabledOpenaiRuntime = deriveRuntimeModelProfilesForSelection("openai", disabledProfiles, disabledManifest);
+
+  assert.deepEqual(openaiEffective["sdd-init"], profiles.openai["sdd-init"]);
+  assert.deepEqual(openaiEffective["review-risk"], profiles.grok["review-risk"]);
+  assert.deepEqual(grokRuntime["gentle-ai-worker"], { model: profiles.grok["gentle-ai-worker"].model, effort: profiles.grok["gentle-ai-worker"].thinking });
+  assert.deepEqual(grokRuntime["jd-judge-a"], { model: profiles.openai["jd-judge-a"].model, effort: profiles.openai["jd-judge-a"].thinking });
+  assert.deepEqual(managedAgents(disabledManifest), expectedAgents);
+  assert.deepEqual(disabledOpenaiEffective["review-risk"], { model: "openai/review-risk", thinking: "medium" });
+  assert.deepEqual(disabledOpenaiRuntime["jd-judge-a"], { model: "openai/jd-judge-a", effort: "medium" });
+  assert.deepEqual(deriveRuntimeConfigForSelection("openai", profiles, manifest, {
+    model_profiles: { unrelatedAgent: { model: "keep/runtime", effort: "low" } },
+  }).model_profiles, {
+    unrelatedAgent: { model: "keep/runtime", effort: "low" },
+    ...deriveRuntimeModelProfilesForSelection("openai", profiles, manifest),
+  });
 });
 
 test("canonical and runtime derivation are pure and map thinking to effort", async () => {

@@ -1,6 +1,6 @@
 # Use `/jb-sdd-odd-models`
 
-The command reports, previews, diagnoses, switches, undoes, or recovers the global model profile used by the managed SDD phase agents and ODD generic agents. Registered profile names come from `model-profiles.manifest.json` instead of being hard-coded.
+The command reports, previews, diagnoses, switches, undoes, or recovers the global model profile used by the managed SDD phase agents, ODD generic agents, and configured judge/reviewer agents. Registered profile names and optional opposite-provider judge routing come from `model-profiles.manifest.json` instead of being hard-coded.
 
 ## Command reference
 
@@ -32,7 +32,7 @@ Expected heading:
 Active SDD/ODD profile: openai
 ```
 
-The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent.
+The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent. With the packaged `oppositeProviderJudges` block, `openai` status means normal agents match OpenAI while configured judges match Grok; `grok` status means the inverse.
 
 ### Diagnose local configuration
 
@@ -63,7 +63,7 @@ Installed/global profile status does not prove effective project routing: projec
 /jb-sdd-odd-models preview openai
 ```
 
-The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's after state. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
+The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's effective after state, including opposite-provider judge mappings when configured. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
 
 ### Select a profile
 
@@ -75,10 +75,10 @@ On success, the selected SDD/ODD mappings are written and Pi reloads. The canoni
 
 ## Add a registered profile
 
-To add a third profile such as `local`, keep the same managed-agent coverage as existing profiles:
+To add a third profile such as `local`, keep the same active managed-agent coverage as existing profiles:
 
 1. Add `{ "name": "local", "modelsFile": "models.local.json" }` to `model-profiles.manifest.json`.
-2. Create `models.local.json` with exactly every agent listed under the manifest's `managedAgentGroups`.
+2. Create `models.local.json` with exactly every agent listed under the manifest's `managedAgentGroups` plus the configured `oppositeProviderJudges.agents` when that block is enabled.
 3. Use `{ "model": "provider/model", "thinking": "low|medium|high|xhigh" }` for each agent.
 4. Restart or reinstall so the installed manifest/profile files are copied into Pi home.
 5. Run `/jb-sdd-odd-models list`, `/jb-sdd-odd-models preview local`, and `/jb-sdd-odd-models doctor`.
