@@ -27,6 +27,7 @@ PI_HOME=/path/to/pi-home pi
 
 ## Documentation
 
+- [Quick installation](INSTALLATION.md)
 - [Installation and recovery](HOW_TO_INSTALL.md)
 - [Command usage](USAGE.md)
 - [How switching works](MODEL_SWITCHING.md)
