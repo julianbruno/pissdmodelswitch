@@ -29,6 +29,7 @@ PI_HOME=/path/to/pi-home pi
 
 - [Quick installation](INSTALLATION.md)
 - [Installation and recovery](HOW_TO_INSTALL.md)
+- [Programmatic testing](TESTING.md)
 - [Command usage](USAGE.md)
 - [How switching works](MODEL_SWITCHING.md)
 - [Architecture and limitations](ARCHITECTURE.md)
