@@ -63,6 +63,10 @@
     "model": "openai-codex/gpt-6-astra",
     "thinking": "high"
   },
+  "orchestrator": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "low"
+  },
   "review-risk": {
     "model": "openai-codex/gpt-6-astra",
     "thinking": "high"
@@ -76,6 +80,14 @@
     "thinking": "high"
   },
   "review-reliability": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-refuter": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "high"
+  },
+  "review-validator": {
     "model": "openai-codex/gpt-6-astra",
     "thinking": "high"
   },

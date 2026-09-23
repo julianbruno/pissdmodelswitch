@@ -29,10 +29,10 @@ Arguments are trimmed and case-insensitive. Dots and hyphens are supported in re
 Expected heading:
 
 ```text
-Active SDD/ODD profile: gpt-5.6-recommended
+Active SDD/ODD profile: openaigentle
 ```
 
-The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent. With the packaged `oppositeProviderJudges` block, GPT-family profiles use the matching Grok cost lane for judges, Grok profiles use the matching GPT-5.6 lane for judges, and legacy `openai`/`grok` aliases retain their previous pairing.
+The state can also be any registered profile name, `custom`, or `unknown`. `[misaligned]` means the canonical entry and live runtime entry differ for that agent. With the packaged `oppositeProviderJudges` block, only paired profiles use opposite-provider judges: paired GPT-family profiles use the matching Grok cost lane, paired Grok profiles use the matching GPT-5.6 lane, and legacy `openai`/`grok` aliases retain their previous pairing. Unpaired profiles, including the default `openaigentle`, retain their own judge mappings.
 
 ### Diagnose local configuration
 
@@ -52,6 +52,8 @@ The state can also be any registered profile name, `custom`, or `unknown`. `[mis
 - effort compatibility using model `reasoning` and `thinkingLevelMap` evidence; and
 - configured-auth evidence through Pi's registry auth status.
 
+Extended or model-specific efforts, including `xhigh` and `max`, require an explicit non-null, non-undefined `thinkingLevelMap` entry on a reasoning model before `doctor` calls them compatible. Accepting an effort string in a profile is not evidence of model support. Without the Pi registry, effort checks are skipped.
+
 A missing local catalog model, missing auth status, or missing registry is a bounded diagnostic. It is not proof that a remote provider is unavailable. `doctor` also cannot establish provider execution or account entitlement.
 
 Installed/global profile status does not prove effective project routing: project overrides and the current Pi session registry can change the effective model catalog.
@@ -60,15 +62,15 @@ Installed/global profile status does not prove effective project routing: projec
 
 ```text
 /jb-sdd-odd-models list
-/jb-sdd-odd-models preview gpt-5.6-recommended
+/jb-sdd-odd-models preview openaigentle
 ```
 
-The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's effective after state, including opposite-provider judge mappings when configured. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
+The preview shows each managed agent's current canonical entry and runtime entry next to the selected profile's effective after state, including opposite-provider judge mappings when configured for a paired profile. Missing legacy entries can be repaired by a switch. Malformed existing managed entries stop the switch before any write.
 
 ### Select a profile
 
 ```text
-/jb-sdd-odd-models gpt-5.6-recommended
+/jb-sdd-odd-models openaigentle
 ```
 
 On success, the selected SDD/ODD mappings are written and Pi reloads. The canonical profile uses `thinking`; the runtime mapping receives the same value as `effort`. If the selected profile is already active, the command leaves file bytes and mtimes untouched and does not reload.
@@ -79,7 +81,7 @@ To add a third profile such as `local`, keep the same active managed-agent cover
 
 1. Add `{ "name": "local", "modelsFile": "models.local.json" }` to `model-profiles.manifest.json`.
 2. Create `models.local.json` with exactly every agent listed under the manifest's `managedAgentGroups` plus the configured `oppositeProviderJudges.agents` when that block is enabled.
-3. Use `{ "model": "provider/model", "thinking": "low|medium|high|xhigh" }` for each agent.
+3. Use `{ "model": "provider/model", "thinking": "max" }` for each agent, choosing an effort appropriate for that model. The package accepts any nonempty, already-trimmed effort string and copies it verbatim; it does not trim, lowercase, whitelist, or downgrade values. The installed runtime or provider may reject unsupported levels even after a successful switch.
 4. Restart or reinstall so the installed manifest/profile files are copied into Pi home.
 5. Run `/jb-sdd-odd-models list`, `/jb-sdd-odd-models preview local`, and `/jb-sdd-odd-models doctor`.
 

@@ -1,0 +1,102 @@
+{
+  "sdd-init": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "medium"
+  },
+  "sdd-explore": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "high"
+  },
+  "sdd-research": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "sdd-proposal": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "sdd-spec": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "high"
+  },
+  "sdd-design": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "sdd-tasks": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "high"
+  },
+  "sdd-onboard": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "medium"
+  },
+  "sdd-archive": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "max"
+  },
+  "sdd-apply": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "low"
+  },
+  "sdd-verify": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "sdd-status": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "medium"
+  },
+  "sdd-sync": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "medium"
+  },
+  "gentle-ai-explore": {
+    "model": "openai-codex/gpt-6-luna",
+    "thinking": "high"
+  },
+  "gentle-ai-worker": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "low"
+  },
+  "gentle-ai-verify": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "orchestrator": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "medium"
+  },
+  "review-risk": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "review-resilience": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "review-readability": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "review-reliability": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "review-refuter": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "review-validator": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "jd-judge-a": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  },
+  "jd-judge-b": {
+    "model": "openai-codex/gpt-6-sol",
+    "thinking": "high"
+  }
+}

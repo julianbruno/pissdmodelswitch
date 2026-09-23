@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "defaultProfile": "gpt-5.6-recommended",
+  "defaultProfile": "openaigentle",
   "managedAgentGroups": {
     "sdd": [
       "sdd-init",
@@ -20,7 +20,8 @@
     "odd": [
       "gentle-ai-explore",
       "gentle-ai-worker",
-      "gentle-ai-verify"
+      "gentle-ai-verify",
+      "orchestrator"
     ]
   },
   "reservedCommandNames": [
@@ -38,6 +39,8 @@
       "review-resilience",
       "review-readability",
       "review-reliability",
+      "review-refuter",
+      "review-validator",
       "jd-judge-a",
       "jd-judge-b"
     ],
@@ -62,6 +65,10 @@
     {
       "name": "openai",
       "modelsFile": "models.openai.json"
+    },
+    {
+      "name": "openaigentle",
+      "modelsFile": "models.openaigentle.json"
     },
     {
       "name": "grok",

@@ -165,6 +165,68 @@ test("registered command uses manifest profiles for completion, list, preview, a
   assert.deepEqual(runtime.model_profiles["sdd-research"], { model: "local/sdd-research", effort: "medium" });
 });
 
+test("preview, switch, and active state preserve unrestricted effort strings exactly", async () => {
+  for (const effort of ["max", "Provider.Custom-v2", "custom effort"]) {
+    const harness = await createHarness();
+    await writeJson(join(harness.gentleDir, "models.local.json"), profile("local", effort));
+    const beforePreview = await snapshotTree(harness.root);
+
+    await harness.command.handler("preview local", harness.ctx);
+    const preview = harness.notifications.at(-1)?.message ?? "";
+    assert.ok(preview.includes(`sdd-init: canonical openai-codex/sdd-init (high) -> local/sdd-init (${effort})`));
+    assert.ok(preview.includes(`runtime openai-codex/sdd-init (high) -> local/sdd-init (${effort})`));
+    assert.deepEqual(await snapshotTree(harness.root), beforePreview);
+    assert.equal(harness.reloadCount(), 0);
+
+    await harness.command.handler("local", harness.ctx);
+    assert.equal(harness.reloadCount(), 1);
+    const canonical = await readJson(harness.canonicalPath);
+    const runtime = await readJson(harness.runtimePath);
+    for (const agent of agents) {
+      assert.deepEqual(canonical[agent], { model: `local/${agent}`, thinking: effort });
+      assert.deepEqual(runtime.model_profiles[agent], { model: `local/${agent}`, effort });
+    }
+
+    const afterSwitch = await snapshotTree(harness.root);
+    await harness.command.handler("status", harness.ctx);
+    assert.match(harness.notifications.at(-1)?.message ?? "", /Active SDD\/ODD profile: local/);
+    assert.ok(harness.notifications.at(-1)?.message.includes(`sdd-init: local/sdd-init (${effort})`));
+    await harness.command.handler("preview openai", harness.ctx);
+    assert.ok(harness.notifications.at(-1)?.message.includes(`canonical local/sdd-init (${effort}) ->`));
+    assert.ok(harness.notifications.at(-1)?.message.includes(`runtime local/sdd-init (${effort}) ->`));
+    await harness.command.handler("local", harness.ctx);
+    assert.match(harness.notifications.at(-1)?.message ?? "", /already active/i);
+    assert.equal(harness.reloadCount(), 1);
+    assert.deepEqual(await snapshotTree(harness.root), afterSwitch);
+
+    await harness.command.handler("openai", harness.ctx);
+    assert.equal(harness.reloadCount(), 2);
+  }
+});
+
+test("invalid canonical and runtime effort values fail closed without rewriting active files", async () => {
+  for (const source of ["canonical", "runtime"] as const) {
+    for (const effort of ["", " ", "\t\n", " max", "max ", 0, false, null, [], {}, undefined]) {
+      const harness = await createHarness();
+      const path = source === "canonical" ? harness.canonicalPath : harness.runtimePath;
+      const state = await readJson(path);
+      const entry = source === "canonical" ? state["sdd-init"] : state.model_profiles["sdd-init"];
+      entry[source === "canonical" ? "thinking" : "effort"] = effort;
+      await writeJson(path, state);
+      const beforeCanonical = await readFile(harness.canonicalPath, "utf8");
+      const beforeRuntime = await readFile(harness.runtimePath, "utf8");
+
+      for (const action of ["status", "preview local", "local"]) {
+        await harness.command.handler(action, harness.ctx);
+        assert.match(harness.notifications.at(-1)?.message ?? "", /(?:thinking|effort) must be a non-empty, trimmed string|missing: (?:thinking|effort)/);
+        assert.equal(harness.reloadCount(), 0);
+        assert.equal(await readFile(harness.canonicalPath, "utf8"), beforeCanonical);
+        assert.equal(await readFile(harness.runtimePath, "utf8"), beforeRuntime);
+      }
+    }
+  }
+});
+
 test("status, preview, and switch use opposite-provider mappings for configured judges", async () => {
   const harness = await createHarness();
 
@@ -247,7 +309,7 @@ test("switch repairs missing newly managed research entries while rejecting malf
   const before = await readFile(harness.runtimePath, "utf8");
   await harness.command.handler("openai", harness.ctx);
   assert.equal(harness.reloadCount(), 1);
-  assert.match(harness.notifications.at(-1)?.message ?? "", /provider\/model identifier|must contain \{model, effort\}|must be one of/);
+  assert.match(harness.notifications.at(-1)?.message ?? "", /provider\/model identifier/);
   assert.equal(await readFile(harness.runtimePath, "utf8"), before);
 });
 

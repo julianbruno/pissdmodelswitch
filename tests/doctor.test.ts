@@ -63,7 +63,7 @@ async function snapshot(paths: string[]): Promise<Map<string, { content?: string
   return result;
 }
 
-async function createHarness() {
+async function createHarness(effort = "high") {
   const root = await mkdir(join(tmpdir(), `doctor-model-profiles-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`), { recursive: true });
   const piHome = root;
   const gentleDir = join(piHome, "gentle-ai");
@@ -83,12 +83,12 @@ async function createHarness() {
   };
 
   await writeJson(join(gentleDir, "model-profiles.manifest.json"), manifest);
-  await writeJson(join(gentleDir, "models.openai.json"), profile("known", "high"));
+  await writeJson(join(gentleDir, "models.openai.json"), profile("known", effort));
   await writeJson(join(gentleDir, "models.grok.json"), profile("known-grok", "xhigh"));
-  await writeJson(join(gentleDir, "models.json"), { ...profile("known", "high"), unmanagedCanonical: { model: "keep/me", thinking: "low" } });
+  await writeJson(join(gentleDir, "models.json"), { ...profile("known", effort), unmanagedCanonical: { model: "keep/me", thinking: "low" } });
   await writeJson(join(agentDir, "subagents.json"), {
     model_profiles: {
-      ...Object.fromEntries(agents.map((agent) => [agent, { model: `known/${agent}`, effort: "high" }])),
+      ...Object.fromEntries(agents.map((agent) => [agent, { model: `known/${agent}`, effort }])),
       unrelatedAgent: { model: "keep/runtime", effort: "low" },
     },
     unrelatedTopLevel: true,
@@ -189,8 +189,51 @@ test("doctor reports malformed journals, drift, missing entries, catalog bounds,
   assert.deepEqual(await snapshot(paths), before);
 });
 
-test("doctor bounds diagnostics when Pi model registry or auth evidence is unavailable", async () => {
-  const harness = await createHarness();
+const effortEvidenceCases = [
+  { name: "advertised max", effort: "max", map: { max: "max" }, supported: true },
+  { name: "max mapped to provider-specific value", effort: "max", map: { max: 32768 }, supported: true },
+  { name: "nonadvertised max", effort: "max", map: { xhigh: "xhigh" }, supported: false },
+  { name: "max without a map", effort: "max", map: undefined, supported: false },
+  { name: "null max", effort: "max", map: { max: null }, supported: false },
+  { name: "undefined max", effort: "max", map: { max: undefined }, supported: false },
+  { name: "inherited max", effort: "max", map: Object.create({ max: "max" }), supported: false },
+  { name: "nonreasoning max", effort: "max", map: { max: "max" }, reasoning: false, supported: false },
+  { name: "advertised custom level", effort: "provider-ultra", map: { "provider-ultra": "ultra" }, supported: true },
+  { name: "nonadvertised custom level", effort: "provider-ultra", map: {}, supported: false },
+  { name: "advertised xhigh", effort: "xhigh", map: { xhigh: "xhigh" }, supported: true },
+  { name: "undefined xhigh", effort: "xhigh", map: { xhigh: undefined }, supported: false },
+  { name: "explicitly disabled baseline", effort: "high", map: { high: null }, supported: false },
+];
+
+for (const evidence of effortEvidenceCases) {
+  test(`doctor checks registry evidence for ${evidence.name} without mutation`, async () => {
+    const harness = await createHarness(evidence.effort);
+    for (const agent of agents) {
+      const model = harness.ctx.modelRegistry!.find("known", agent);
+      model.reasoning = evidence.reasoning ?? true;
+      model.thinkingLevelMap = evidence.map;
+    }
+    const paths = [harness.canonicalPath, harness.runtimePath, harness.manifestPath, join(harness.gentleDir, "models.openai.json"), harness.journalDir];
+    const before = await snapshot(paths);
+
+    await harness.command.handler("doctor", harness.ctx);
+    const message = harness.notifications.at(-1)?.message ?? "";
+
+    assert.equal(harness.notifications.at(-1)?.level, evidence.supported ? "info" : "warning");
+    assert.match(message, /Active SDD\/ODD profile: openai/);
+    for (const agent of agents) {
+      const compatible = `Catalog: known/${agent} found, effort ${evidence.effort} compatible.`;
+      const unsupported = `Effort: known/${agent} does not advertise ${evidence.effort} support`;
+      assert.equal(message.includes(compatible), evidence.supported);
+      assert.equal(message.includes(unsupported), !evidence.supported);
+    }
+    assert.equal(harness.reloadCount(), 0);
+    assert.deepEqual(await snapshot(paths), before);
+  });
+}
+
+test("doctor bounds max diagnostics when Pi model registry or auth evidence is unavailable", async () => {
+  const harness = await createHarness("max");
   harness.ctx.modelRegistry = undefined;
 
   await harness.command.handler("doctor", harness.ctx);
@@ -199,4 +242,6 @@ test("doctor bounds diagnostics when Pi model registry or auth evidence is unava
   assert.match(message, /Pi model registry unavailable; catalog, auth, and effort checks skipped/i);
   assert.match(message, /cannot establish provider authentication or execution/i);
   assert.doesNotMatch(message, /remote unavailable/i);
+  assert.doesNotMatch(message, /effort max compatible|does not advertise max support/i);
+  assert.equal(harness.reloadCount(), 0);
 });

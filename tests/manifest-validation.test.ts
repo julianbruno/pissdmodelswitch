@@ -5,7 +5,6 @@ import test from "node:test";
 
 import {
   RESERVED_COMMAND_NAMES,
-  SUPPORTED_EFFORTS,
   assertProfilesCoverManifest,
   deriveCanonicalProfile,
   deriveCanonicalProfileForSelection,
@@ -38,18 +37,21 @@ const expectedSddAgents = [
   "sdd-status",
   "sdd-sync",
 ];
-const expectedOddAgents = ["gentle-ai-explore", "gentle-ai-worker", "gentle-ai-verify"];
+const expectedOddAgents = ["gentle-ai-explore", "gentle-ai-worker", "gentle-ai-verify", "orchestrator"];
 const expectedJudgeAgents = [
   "review-risk",
   "review-resilience",
   "review-readability",
   "review-reliability",
+  "review-refuter",
+  "review-validator",
   "jd-judge-a",
   "jd-judge-b",
 ];
 const expectedAgents = [...expectedSddAgents, ...expectedOddAgents, ...expectedJudgeAgents];
 const expectedNonJudgeAgents = [...expectedSddAgents, ...expectedOddAgents];
 const roleExpansion: Record<string, string[]> = {
+  orquestador: ["orchestrator"],
   razonamiento: [
     "sdd-explore",
     "sdd-research",
@@ -153,14 +155,14 @@ test("package version is 1.1.0", async () => {
   assert.equal((await readJson("package.json")).version, "1.1.0");
 });
 
-test("packaged manifest registers every named profile plus compatibility aliases", async () => {
+test("packaged manifest defaults to openaigentle and registers named profiles plus compatibility aliases", async () => {
   const manifest = await packagedManifest();
   const catalog = await packagedNamedProfiles();
   const namedProfileNames = catalog.profiles.map((profile) => profile.name);
-  const expectedRegisteredNames = ["openai", "grok", ...namedProfileNames];
+  const expectedRegisteredNames = ["openai", "openaigentle", "grok", ...namedProfileNames];
 
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.defaultProfile, "gpt-5.6-recommended");
+  assert.equal(manifest.defaultProfile, "openaigentle");
   assert.deepEqual(manifest.managedAgentGroups, {
     sdd: expectedSddAgents,
     odd: expectedOddAgents,
@@ -216,9 +218,33 @@ test("generated packaged named profiles equal role expansion from named-profiles
   for (const profile of Object.values(profiles)) {
     for (const entry of Object.values(profile)) {
       assert.match(entry.model, /^[^/\s]+\/[^/\s]+$/);
-      assert.equal(SUPPORTED_EFFORTS.includes(entry.thinking), true);
+      assert.equal(typeof entry.thinking, "string");
+      assert.notEqual(entry.thinking, "");
+      assert.equal(entry.thinking, entry.thinking.trim());
     }
   }
+});
+
+test("openaigentle preserves the supplied GPT-6 mapping in canonical and runtime selections", async () => {
+  const manifest = await packagedManifest();
+  const profiles = await packagedProfiles(manifest);
+  const expected = Object.fromEntries([
+    ...["sdd-init", "sdd-onboard", "sdd-status", "sdd-sync", "orchestrator"].map((agent) =>
+      [agent, { model: "openai-codex/gpt-6-sol", thinking: "medium" }]),
+    ...["sdd-explore", "sdd-spec", "sdd-tasks", "gentle-ai-explore"].map((agent) =>
+      [agent, { model: "openai-codex/gpt-6-luna", thinking: "high" }]),
+    ["sdd-archive", { model: "openai-codex/gpt-6-luna", thinking: "max" }],
+    ...["sdd-apply", "gentle-ai-worker"].map((agent) =>
+      [agent, { model: "openai-codex/gpt-6-sol", thinking: "low" }]),
+    ...["sdd-research", "sdd-proposal", "sdd-design", "sdd-verify", "gentle-ai-verify", ...expectedJudgeAgents].map((agent) =>
+      [agent, { model: "openai-codex/gpt-6-sol", thinking: "high" }]),
+  ]);
+
+  assert.deepEqual(profiles.openaigentle, expected);
+  assert.deepEqual(deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest), expected);
+  assert.deepEqual(deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest),
+    Object.fromEntries(Object.entries(expected).map(([agent, entry]) =>
+      [agent, { model: entry.model, effort: entry.thinking }])));
 });
 
 test("manifest validation rejects unsupported versions, missing groups, duplicate names, and reserved commands", () => {
@@ -247,9 +273,11 @@ test("profile validation rejects malformed objects, coverage drift, invalid iden
   const manifest = validateManifest(validManifestPatch({}));
   assert.throws(() => validateNamedProfile([], manifest, "arrayProfile"), /must be a JSON object/);
 
-  const missing = validProfilePatch({});
-  delete (missing as Record<string, unknown>)["sdd-research"];
-  assert.throws(() => validateNamedProfile(missing, manifest, "missingProfile"), /missing: sdd-research/);
+  for (const agent of ["sdd-research", "orchestrator", "review-refuter", "review-validator"]) {
+    const missing = validProfilePatch({});
+    delete missing[agent];
+    assert.throws(() => validateNamedProfile(missing, manifest, "missingProfile"), new RegExp(`missing: ${agent}`));
+  }
 
   const extra = validProfilePatch({ "unknown-agent": { model: "provider/model", thinking: "medium" } });
   assert.throws(() => validateNamedProfile(extra, manifest, "extraProfile"), /extra: unknown-agent/);
@@ -257,10 +285,30 @@ test("profile validation rejects malformed objects, coverage drift, invalid iden
   assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": [] }), manifest, "badEntry"), /must be a JSON object/);
   assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": { model: "provider/model", thinking: "medium", extra: true } }), manifest, "badEntry"), /expected keys/);
   assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": { model: "provider-only", thinking: "medium" } }), manifest, "badModel"), /provider\/model identifier/);
-  assert.throws(() => validateNamedProfile(validProfilePatch({ "sdd-init": { model: "provider/model", thinking: "extreme" } }), manifest, "badEffort"), /must be one of/);
+  for (const thinking of ["", " ", "\t\n", " max", "max ", 0, false, null, [], {}]) {
+    assert.throws(() => validateNamedProfile(validProfilePatch({
+      "sdd-init": { model: "provider/model", thinking },
+    }), manifest, "badEffort"), /thinking must be (?:a string|a non-empty, trimmed string)/);
+  }
+  assert.throws(() => validateNamedProfile(validProfilePatch({
+    "sdd-init": { model: "provider/model" },
+  }), manifest, "missingEffort"), /missing: thinking/);
 
   assert.throws(() => validateProfileSet({ "gpt-5.6-recommended": validProfilePatch({}) }, manifest), /missing: grok-recommended/);
   assert.throws(() => validateProfileSet({ "gpt-5.6-recommended": validProfilePatch({}), "grok-recommended": validProfilePatch({}), other: validProfilePatch({}) }, manifest), /extra: other/);
+});
+
+test("profile validation and derivation preserve arbitrary trimmed effort strings literally", () => {
+  const manifest = validateManifest(validManifestPatch({}));
+  for (const thinking of ["low", "medium", "high", "xhigh", "max", "extreme", "Provider.Custom-v2", "custom effort"]) {
+    const input = validProfilePatch({ "sdd-init": { model: "provider/model", thinking } });
+    const validated = validateNamedProfile(input, manifest);
+    assert.deepEqual(validated["sdd-init"], input["sdd-init"]);
+    assert.deepEqual(deriveCanonicalProfile(validated, manifest)["sdd-init"], input["sdd-init"]);
+    assert.deepEqual(deriveRuntimeModelProfiles(validated, manifest)["sdd-init"], {
+      model: "provider/model", effort: thinking,
+    });
+  }
 });
 
 test("opposite-provider judge derivation pairs representative named profiles by provider and cost lane", async () => {
@@ -290,7 +338,12 @@ test("opposite-provider judge derivation pairs representative named profiles by 
   const disabledOpenaiRuntime = deriveRuntimeModelProfilesForSelection("gpt-5.6-recommended", disabledProfiles, disabledManifest);
 
   assert.deepEqual(lowCostEffective["sdd-init"], profiles["gpt-5.6-low-cost"]["sdd-init"]);
-  assert.deepEqual(lowCostEffective["review-risk"], profiles["grok-low-cost"]["review-risk"]);
+  assert.deepEqual(lowCostEffective.orchestrator, profiles["gpt-5.6-low-cost"].orchestrator);
+  for (const agent of expectedJudgeAgents) {
+    assert.deepEqual(lowCostEffective[agent], profiles["grok-low-cost"][agent]);
+    assert.deepEqual(astraOnlyEffective[agent], profiles["grok-powerful"][agent]);
+    assert.deepEqual(disabledOpenaiEffective[agent], disabledProfiles["gpt-5.6-recommended"][agent]);
+  }
   assert.deepEqual(astraOnlyEffective["review-risk"], profiles["grok-powerful"]["review-risk"]);
   assert.deepEqual(grokRuntime["gentle-ai-worker"], { model: profiles["grok-recommended"]["gentle-ai-worker"].model, effort: profiles["grok-recommended"]["gentle-ai-worker"].thinking });
   assert.deepEqual(grokRuntime["jd-judge-a"], { model: profiles["gpt-5.6-recommended"]["jd-judge-a"].model, effort: profiles["gpt-5.6-recommended"]["jd-judge-a"].thinking });
@@ -331,6 +384,7 @@ test("canonical and runtime derivation are pure and map thinking to effort", asy
     },
   });
 
+  const originalResearchThinking = defaultProfile["sdd-research"].thinking;
   canonical["sdd-research"].thinking = "low";
-  assert.equal(defaultProfile["sdd-research"].thinking, "medium");
+  assert.equal(defaultProfile["sdd-research"].thinking, originalResearchThinking);
 });

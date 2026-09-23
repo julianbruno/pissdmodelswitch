@@ -63,6 +63,10 @@
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
   },
+  "orchestrator": {
+    "model": "xai/grok-4.6",
+    "thinking": "medium"
+  },
   "review-risk": {
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
@@ -76,6 +80,14 @@
     "thinking": "xhigh"
   },
   "review-reliability": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "review-refuter": {
+    "model": "xai/grok-4.6",
+    "thinking": "xhigh"
+  },
+  "review-validator": {
     "model": "xai/grok-4.6",
     "thinking": "xhigh"
   },

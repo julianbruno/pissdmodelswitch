@@ -63,6 +63,10 @@
     "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },
+  "orchestrator": {
+    "model": "openai-codex/gpt-5.6-terra",
+    "thinking": "medium"
+  },
   "review-risk": {
     "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
@@ -76,6 +80,14 @@
     "thinking": "medium"
   },
   "review-reliability": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "medium"
+  },
+  "review-refuter": {
+    "model": "openai-codex/gpt-6-astra",
+    "thinking": "medium"
+  },
+  "review-validator": {
     "model": "openai-codex/gpt-6-astra",
     "thinking": "medium"
   },

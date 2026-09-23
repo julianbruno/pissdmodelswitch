@@ -9,7 +9,7 @@ flowchart LR
   C["/jb-sdd-odd-models <profile>"] --> M["model-profiles.manifest.json"]
   M --> P["models.<profile>.json"]
   P --> V["Validate exact managed-agent profile"]
-  V --> O["Apply opposite-provider judge routing"]
+  V --> O["Apply opposite-provider judge routing for paired profiles"]
   O --> A["gentle-ai/models.json\nmodel + thinking"]
   O --> R["agent/subagents.json\nmodel_profiles: model + effort"]
   R --> G["Gentle Pi native agent runtime"]
@@ -37,24 +37,27 @@ A switch that is already semantically aligned leaves bytes and mtimes untouched 
 
 ## Opposite-provider judges
 
-The optional `oppositeProviderJudges` manifest block controls mixed judge routing. `enabled` defaults to `true`, but absent or empty `agents` preserves the previous uniform-profile behavior. The packaged manifest explicitly configures these judge/reviewer agents: `review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`.
+The optional `oppositeProviderJudges` manifest block controls mixed judge routing. `enabled` defaults to `true`, but absent or empty `agents` preserves the previous uniform-profile behavior. The packaged manifest explicitly configures these judge/reviewer agents: `review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `review-refuter`, `review-validator`, `jd-judge-a`, and `jd-judge-b`.
 
-Version 1.1 packages GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful profiles from `config/named-profiles.json`. The default installed profile is `gpt-5.6-recommended`; `openai` and `grok` remain compatibility aliases for `gpt-5.6-recommended` and `grok-recommended`.
+Version 1.1 packages GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful profiles from `config/named-profiles.json`. The default installed profile is `openaigentle`; `openai` and `grok` remain compatibility aliases for `gpt-5.6-recommended` and `grok-recommended`.
 
-For the packaged profiles, selecting a GPT-family lane writes normal SDD/ODD agents from that profile and judge/reviewer agents from the matching Grok lane. Selecting a Grok lane writes normal agents from Grok and judges from the matching GPT-5.6 lane. If a registered profile has no `profilePairs` entry, its judges use that same selected profile.
+Only paired profiles use opposite-provider judges. Selecting a paired GPT-family lane writes normal SDD/ODD agents from that profile and judge/reviewer agents from the matching Grok lane. Selecting a paired Grok lane writes normal agents from Grok and judges from the matching GPT-5.6 lane. Unpaired profiles, including `openaigentle`, retain their own judge mappings.
 
 ## Managed effort mapping
 
 The runtime mapping uses `model_profiles[agent] = { model, effort }`. The canonical profile uses `{ model, thinking }`; switching copies `thinking` to runtime `effort`.
 
-The package currently supports these profile effort values: `low`, `medium`, `high`, and `xhigh`. `doctor` checks effort compatibility only from installed Pi API evidence:
+Profiles accept any nonempty, already-trimmed effort string, including `max` and model-specific values. Values are preserved verbatim: the package does not trim, lowercase, whitelist, or downgrade them. The original `openaigentle` archive mapping remains `openai-codex/gpt-6-luna` with `thinking: max` and runtime `effort: max`.
 
-- model found through `ctx.modelRegistry.find(provider, modelId)`;
-- model `reasoning` must be true for these non-off efforts;
-- `thinkingLevelMap[level] === null` means unsupported; and
-- `xhigh` requires a non-null `thinkingLevelMap.xhigh` entry because Pi docs say extended `xhigh`/`max` levels are opt-in.
+Profile acceptance is separate from capability diagnostics. `doctor` uses the installed Pi registry:
 
-It does not invent a provider support enum and does not make provider requests.
+- the model must be found through `ctx.modelRegistry.find(provider, modelId)` and have `reasoning: true`;
+- `thinkingLevelMap[level] === null` means unsupported;
+- existing baseline diagnostics for `low`, `medium`, and `high` remain compatible on reasoning models unless explicitly disabled;
+- all other levels, including `xhigh`, `max`, and model-specific values, require an own `thinkingLevelMap[level]` entry that is neither null nor undefined; and
+- when the registry is unavailable, catalog, auth, and effort checks are skipped rather than assumed successful.
+
+These are local capability checks, not provider requests or execution guarantees. A successful profile switch preserves the requested effort even if `doctor` warns about it; the installed runtime or provider may still reject unsupported levels.
 
 ## Files read and written
 
@@ -74,7 +77,7 @@ Before status comparison or switching, each registered named profile must:
 
 - be a JSON object;
 - contain exactly the manifest's active managed SDD/ODD keys plus configured judge/reviewer keys; and
-- give every key string-valued `model` and supported `thinking` fields.
+- give every key a `model` in `provider/model` form and a nonempty, already-trimmed `thinking` string.
 
 The active runtime file must have an object-valued `model_profiles` property. Existing managed entries in the active canonical/runtime files are validated before a switch. Missing managed entries from older installs, such as newly added `sdd-research`, are repairable during a switch and are added from the selected profile. Malformed existing entries are not repaired silently; the switch stops before writing.
 

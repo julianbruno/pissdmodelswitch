@@ -148,9 +148,17 @@ test("fresh temp install copies manifest, registered profiles, extension helpers
   }
   assert.deepEqual(await readJson(join(piHome, "gentle-ai", "models.json")), deriveCanonicalProfileForSelection(manifest.defaultProfile, profiles, manifest));
   assert.deepEqual((await readJson(join(piHome, "agent", "subagents.json"))).model_profiles, deriveRuntimeModelProfilesForSelection(manifest.defaultProfile, profiles, manifest));
+  // Literal assertions protect the original archive mapping independently of derivation helpers.
+  assert.deepEqual((await readJson(join(piHome, "gentle-ai", "models.json")))["sdd-archive"], {
+    model: "openai-codex/gpt-6-luna", thinking: "max",
+  });
+  assert.deepEqual((await readJson(join(piHome, "agent", "subagents.json"))).model_profiles["sdd-archive"], {
+    model: "openai-codex/gpt-6-luna", effort: "max",
+  });
+  const expectedReviewProfileName = manifest.oppositeProviderJudges.profilePairs[manifest.defaultProfile] ?? manifest.defaultProfile;
   assert.deepEqual(
     (await readJson(join(piHome, "gentle-ai", "models.json")))["review-risk"],
-    profiles[manifest.oppositeProviderJudges.profilePairs[manifest.defaultProfile]]["review-risk"],
+    profiles[expectedReviewProfileName]["review-risk"],
   );
   assert.equal(await exists(join(piHome, "agent", "extensions", "sdd-model-profiles.ts")), true);
   assert.equal(await exists(join(piHome, "agent", "extensions", "model-profiles", "core.ts")), true);

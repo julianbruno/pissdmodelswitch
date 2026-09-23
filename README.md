@@ -37,10 +37,10 @@ PI_HOME=/path/to/pi-home pi
 
 ## Scope
 
-The command manages every agent named in `config/model-profiles.manifest.json`. The current manifest covers SDD phase agents, including `sdd-research`, ODD generic agents (`gentle-ai-explore`, `gentle-ai-worker`, and `gentle-ai-verify`), and configured judge/reviewer agents (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`).
+The command manages every agent named in `config/model-profiles.manifest.json`. The current manifest covers `orchestrator`, SDD phase agents, including `sdd-research`, ODD generic agents (`gentle-ai-explore`, `gentle-ai-worker`, and `gentle-ai-verify`), review support agents (`review-refuter` and `review-validator`), and configured judge/reviewer agents (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `jd-judge-a`, and `jd-judge-b`).
 
-Version 1.1 registers every named profile from `config/named-profiles.json`: GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful variants. The default profile is `gpt-5.6-recommended`; legacy `openai` and `grok` aliases remain registered for compatibility.
+Version 1.1 registers every named profile from `config/named-profiles.json`: GPT-5.6, GPT Astra, GPT Astra-only, and Grok low-cost/recommended/powerful variants. The default profile is `openaigentle`, using GPT-6 Sol/Luna; legacy `openai` and `grok` aliases remain registered for compatibility.
 
-By default, judge/reviewer agents use an opposite-provider profile in the same cost lane: GPT-family profiles route judges to the matching Grok lane, and Grok profiles route judges to the matching GPT-5.6 lane. Legacy `openai` still pairs with `grok`, and `grok` still pairs with `openai`. Manifests without configured judge agents keep the previous uniform-profile behavior.
+For paired profiles, judge/reviewer agents use an opposite-provider profile in the same cost lane: GPT-family profiles route judges to the matching Grok lane, and Grok profiles route judges to the matching GPT-5.6 lane. Legacy `openai` still pairs with `grok`, and `grok` still pairs with `openai`. Unpaired profiles, including `openaigentle`, retain their own judge mappings. Manifests without configured judge agents keep the previous uniform-profile behavior.
 
 It writes only the managed keys in the installed canonical and runtime mappings. Unrelated top-level JSON keys and unrelated `model_profiles` entries are preserved and reported by `doctor` rather than treated as errors.

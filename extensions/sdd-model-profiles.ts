@@ -5,7 +5,6 @@ import { join, resolve, sep } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import {
-  SUPPORTED_EFFORTS,
   deriveCanonicalProfileForSelection,
   deriveRuntimeConfigForSelection,
   deriveRuntimeModelProfilesForSelection,
@@ -59,7 +58,6 @@ type ProfileRuntimeState = {
 
 const COMMAND_NAME = "jb-sdd-odd-models";
 const STATIC_ACTIONS = ["status", "list", "preview", "doctor", "undo", "recover"] as const;
-const supportedEffortSet = new Set<string>(SUPPORTED_EFFORTS);
 const providerModelPattern = /^[^/\s]+\/[^/\s]+$/;
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -155,10 +153,10 @@ function validateModel(value: unknown, label: string): string {
 }
 
 function validateEffort(value: unknown, label: string): ModelEffort {
-  if (typeof value !== "string" || !supportedEffortSet.has(value)) {
-    throw new Error(`${label} must be one of: ${SUPPORTED_EFFORTS.join(", ")}.`);
+  if (typeof value !== "string" || !value || value !== value.trim()) {
+    throw new Error(`${label} must be a non-empty, trimmed string.`);
   }
-  return value as ModelEffort;
+  return value;
 }
 
 function validateCanonicalEntry(value: unknown, label: string): ModelProfileEntry {
@@ -377,8 +375,9 @@ function supportsEffort(model: unknown, effort: ModelEffort): boolean {
   if (!isJsonObject(model) || model.reasoning !== true) return false;
   const map = isJsonObject(model.thinkingLevelMap) ? model.thinkingLevelMap : undefined;
   if (map && hasOwnKey(map, effort) && map[effort] === null) return false;
-  if (effort === "xhigh") return !!map && hasOwnKey(map, "xhigh") && map.xhigh !== null && map.xhigh !== undefined;
-  return true;
+  // Preserve baseline diagnostics; extended/model-specific levels require explicit evidence.
+  if (effort === "low" || effort === "medium" || effort === "high") return true;
+  return !!map && hasOwnKey(map, effort) && map[effort] !== null && map[effort] !== undefined;
 }
 
 async function doctorText(paths: ResolvedPaths, ctx: DoctorCommandContext): Promise<{ text: string; level: "info" | "warning" }> {

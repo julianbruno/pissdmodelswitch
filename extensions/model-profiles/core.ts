@@ -5,14 +5,15 @@ export const KNOWN_OPPOSITE_PROVIDER_JUDGES = [
   "review-resilience",
   "review-readability",
   "review-reliability",
+  "review-refuter",
+  "review-validator",
   "jd-judge-a",
   "jd-judge-b",
 ] as const;
-export const SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"] as const;
 export const RESERVED_COMMAND_NAMES = ["status", "list", "preview", "doctor", "undo", "recover"] as const;
 
 export type ManagedAgentGroupName = (typeof REQUIRED_MANAGED_AGENT_GROUPS)[number];
-export type ModelEffort = (typeof SUPPORTED_EFFORTS)[number];
+export type ModelEffort = string;
 export type JsonObject = Record<string, unknown>;
 
 export type ModelProfileEntry = {
@@ -50,7 +51,6 @@ export type RuntimeModelProfiles = Record<string, RuntimeModelProfileEntry>;
 
 const safeNamePattern = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
 const providerModelPattern = /^[^/\s]+\/[^/\s]+$/;
-const supportedEffortSet = new Set<string>(SUPPORTED_EFFORTS);
 const builtInReservedCommandSet = new Set<string>(RESERVED_COMMAND_NAMES);
 const knownOppositeProviderJudgeSet = new Set<string>(KNOWN_OPPOSITE_PROVIDER_JUDGES);
 
@@ -269,10 +269,10 @@ function validateEntry(value: unknown, label: string): ModelProfileEntry {
   if (model !== model.trim() || !providerModelPattern.test(model)) {
     fail(`${label}.model must be a non-empty provider/model identifier.`);
   }
-  if (!supportedEffortSet.has(thinking)) {
-    fail(`${label}.thinking must be one of: ${SUPPORTED_EFFORTS.join(", ")}.`);
+  if (!thinking || thinking !== thinking.trim()) {
+    fail(`${label}.thinking must be a non-empty, trimmed string.`);
   }
-  return { model, thinking: thinking as ModelEffort };
+  return { model, thinking };
 }
 
 export function validateNamedProfile(input: unknown, manifest: ModelProfilesManifest, profileName = "profile"): ValidatedModelProfile {
