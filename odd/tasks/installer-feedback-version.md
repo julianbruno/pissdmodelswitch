@@ -11,10 +11,10 @@ Preserve Pi home merge, existing backups and per-file atomic writes, transaction
 - [x] T2: Document configuration and output, verify full suite and shell syntax. Route: delegated writer for docs; independent verification per assessment. Checks: `npm test` (58/58), `sh -n install/install.sh`, `git diff --check` passed; separate read-only verifier passed.
 
 ## TDD and delivery
-TDD mode not explicitly configured; ordinary functional checks. Runner: package `npm test`, focused Node test. Forecast ~150 authored diff lines, ask-on-risk strategy. Work-unit commits pending explicit commit authorization under safety rule; do not push or install globally.
+TDD mode not explicitly configured; ordinary functional checks. Runner: package `npm test`, focused Node test. Forecast ~150 authored diff lines, ask-on-risk strategy. Work-unit commit: `f1f8027` (`feat(installer): report progress and validate package version`). Do not push or install globally.
 
 ## Evidence
-Exploration: installer had success/no-op output but no startup progress; `package.json` is 1.1.0. User selected package metadata rather than selectable release installation. T1 changed `install/install.sh`, `install/model-profiles-install.ts`, and `tests/installer-merge.test.ts`. Focused tests 11/11 and shell syntax passed. Native risk assessment returned unassessable due to unrelated untracked file; separate read-only verifier found no concrete issues. `npm test` 58/58, shell syntax, and diff check passed; parent spot-checked diff check. Simulated write failure remains untested. No live install or commit.
+Exploration: installer had success/no-op output but no startup progress; `package.json` is 1.1.0. User selected package metadata rather than selectable release installation. T1 changed `install/install.sh`, `install/model-profiles-install.ts`, and `tests/installer-merge.test.ts`. Focused tests 11/11 and shell syntax passed. Native risk assessment returned unassessable due to unrelated untracked file; separate read-only verifier found no concrete issues. `npm test` 58/58, shell syntax, and diff check passed; parent spot-checked diff check. Simulated write failure remains untested. No live install; committed on feature branch `feat/installer-feedback-version`.
 
 ## Next step
 Optional user-authorized install into live PI_HOME and Pi restart/status verification. No further source work pending.
