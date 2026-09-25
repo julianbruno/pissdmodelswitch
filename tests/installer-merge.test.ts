@@ -53,8 +53,9 @@ async function copyTree(source: string, target: string): Promise<void> {
   }
 }
 
-async function copyPackageFixture(): Promise<string> {
+async function copyPackageFixture(includeMetadata = true): Promise<string> {
   const root = await tempRoot("installer-package");
+  if (includeMetadata) await copyFile("package.json", join(root, "package.json"));
   await mkdir(join(root, "config"), { recursive: true });
   await mkdir(join(root, "extensions"), { recursive: true });
   await mkdir(join(root, "install"), { recursive: true });
@@ -272,6 +273,75 @@ test("installer fails closed when active transaction or same-target lock is pres
   assert.equal(await readFile(runtimePath, "utf8"), beforeRuntime);
   await writeFile(join(journalDir, "active.json"), "{malformed", "utf8");
   await assert.rejects(runInstall(".", piHome), /transaction state is unresolved|ambiguous/i);
+});
+
+test("CLI reports custom version, backup-before-write progress, success, and no-op", async () => {
+  const packageRoot = await copyPackageFixture();
+  const piHome = await preparePiHome("installer-feedback");
+  const version = "2.3.4-rc.1+build.007";
+  await writeJson(join(packageRoot, "package.json"), { type: "module", version });
+  const runtimePath = join(piHome, "agent", "subagents.json");
+  await writeJson(runtimePath, { preserved: true });
+  const before = await readFile(runtimePath, "utf8");
+  const { stdout } = await runShellInstallWithFakeNode("22.19.0", packageRoot, piHome);
+  assert.match(stdout, /installer starting.*Preflight:/);
+  assert.ok(stdout.includes(`Target PI_HOME: ${piHome}`));
+  assert.ok(stdout.includes(`Package: jb-sdd-odd-models ${version}`));
+  assert.match(stdout, /Plan: [1-9][0-9]* changed file\(s\)/);
+  assert.match(stdout, /Backup: saving 1 existing changed file/);
+  assert.ok(stdout.indexOf("Backup complete:") < stdout.indexOf("Writing 1/"));
+  assert.ok(stdout.indexOf("Writing 1/") < stdout.indexOf("SUCCESS:"));
+  const backupRoot = stdout.match(/Backup complete: (.+)/)![1];
+  assert.equal(await readFile(join(backupRoot, "agent", "subagents.json"), "utf8"), before);
+  const beforeStat = await stat(runtimePath);
+  const repeat = await runShellInstallWithFakeNode("22.19.0", packageRoot, piHome);
+  assert.match(repeat.stdout, /Plan: 0 changed file/);
+  assert.match(repeat.stdout, /NO-OP:.*no files changed/);
+  assert.doesNotMatch(repeat.stdout, /Writing|Backup|SUCCESS:/);
+  assert.equal((await stat(runtimePath)).mtimeMs, beforeStat.mtimeMs);
+  assert.equal((await readdir(join(piHome, "backups"))).length, 1);
+});
+
+test("package metadata rejects malformed SemVer before target mutation", async () => {
+  const packageRoot = await copyPackageFixture(false);
+  const piHome = await preparePiHome("installer-metadata");
+  const runtimePath = join(piHome, "agent", "subagents.json");
+  await writeJson(runtimePath, { preserved: true });
+  const before = await readFile(runtimePath, "utf8");
+  await assert.rejects(runInstall(packageRoot, piHome), /Package asset is missing: package.json/);
+  const invalid = [undefined, null, 123, "", "v1.2.3", "1.2", "01.2.3", "1.02.3", "1.2.03", "1.2.3-01", "1.2.3-rc..1", "1.2.3+", "1.2.3+a_b", "1.2.3\n"];
+  for (const version of invalid) {
+    await writeJson(join(packageRoot, "package.json"), { version });
+    await assert.rejects(runInstall(packageRoot, piHome), /package.json.version must be a valid SemVer/);
+  }
+  for (const metadata of ["{broken", "[]"]) {
+    await writeFile(join(packageRoot, "package.json"), metadata);
+    await assert.rejects(runInstall(packageRoot, piHome), /Package metadata/);
+  }
+  assert.equal(await readFile(runtimePath, "utf8"), before);
+  assert.deepEqual(await readdir(piHome), ["agent"]);
+  assert.deepEqual(await readdir(join(piHome, "agent")), ["subagents.json"]);
+  for (const version of ["0.0.0", "1.2.3-alpha.0.01a+001", "1.2.3+build.001"]) {
+    await writeJson(join(packageRoot, "package.json"), { version });
+    await runInstall(packageRoot, piHome);
+  }
+});
+
+test("CLI preflight failures are visible and never report success", async () => {
+  const packageRoot = await copyPackageFixture();
+  const piHome = await preparePiHome("installer-cli-failure");
+  for (const version of ["22.18.1", "22.19.0"]) {
+    await writeJson(join(packageRoot, "package.json"), { type: "module", version: "invalid" });
+    await assert.rejects(runShellInstallWithFakeNode(version, packageRoot, piHome), (error: any) => {
+      assert.equal(error.code, 1);
+      assert.match(error.stdout, /installer starting/);
+      assert.match(error.stderr, /FAILURE:/);
+      assert.doesNotMatch(error.stdout, /SUCCESS:|NO-OP:|Writing/);
+      return true;
+    });
+  }
+  assert.deepEqual(await readdir(piHome), ["agent"]);
+  assert.deepEqual(await readdir(join(piHome, "agent")), []);
 });
 
 test("install shell enforces Node strip-types minimum before running the TypeScript installer", async () => {

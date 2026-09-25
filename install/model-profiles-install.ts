@@ -91,6 +91,19 @@ async function readOptionalJson(path: string, label: string): Promise<JsonObject
   return parseJsonObject(await readFile(path, "utf8"), label, path);
 }
 
+async function loadPackageVersion(packageRoot: string): Promise<string> {
+  const path = join(packageRoot, "package.json");
+  const metadata = parseJsonObject(await readText(path, "package.json"), "Package metadata", path);
+  // SemVer 2.0: numeric prerelease identifiers cannot have leading zeroes.
+  const numeric = "(?:0|[1-9][0-9]*)";
+  const prerelease = `(?:${numeric}|[0-9]*[A-Za-z-][0-9A-Za-z-]*)`;
+  const semver = new RegExp(`^${numeric}\\.${numeric}\\.${numeric}(?:-${prerelease}(?:\\.${prerelease})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`);
+  if (typeof metadata.version !== "string" || !semver.test(metadata.version) || metadata.version.trim() !== metadata.version) {
+    fail("package.json.version must be a valid SemVer (for example, 1.2.3 or 1.2.3-rc.1+build.5).");
+  }
+  return metadata.version;
+}
+
 async function loadRegistry(packageRoot: string): Promise<Registry> {
   const configDir = assertInside(packageRoot, join(packageRoot, "config"), "Config directory");
   const sourceText = new Map<string, string>();
@@ -249,6 +262,10 @@ export async function installModelProfiles(input: InstallOptions = {}): Promise<
   if (!piHome || piHome === resolve(".pi")) fail("Neither HOME nor PI_HOME is set. Set one before installing.");
   const log = input.log ?? console.log;
 
+  log("Preflight: validating package metadata, assets, and destination.");
+  log(`Target PI_HOME: ${piHome}`);
+  const version = await loadPackageVersion(packageRoot);
+  log(`Package: jb-sdd-odd-models ${version}`);
   await validatePiHome(piHome);
   const registry = await loadRegistry(packageRoot);
   const copyAssets = await loadCopyAssets(packageRoot);
@@ -262,23 +279,29 @@ export async function installModelProfiles(input: InstallOptions = {}): Promise<
   for (const plan of plans) assertInside(piHome, plan.path, "Install target");
 
   const changed = await changedPlans(plans);
+  log(`Plan: ${changed.length} changed file(s).`);
   if (!changed.length) {
-    log(`jb-sdd-odd-models is already installed in ${piHome}; no files changed.`);
+    log(`NO-OP: jb-sdd-odd-models ${version} is already installed in ${piHome}; no files changed.`);
     return { changed: false, changedFiles: [] };
   }
 
+  const existingCount = changed.filter((plan) => plan.existed).length;
+  log(`Backup: saving ${existingCount} existing changed file(s) before writing install targets.`);
   const backupRoot = await backupChanged(piHome, changed);
-  for (const plan of changed) await atomicWrite(plan.path, plan.content, plan.mode);
+  log(backupRoot ? `Backup complete: ${backupRoot}` : "Backup: none needed; all changed files are new.");
+  for (const [index, plan] of changed.entries()) {
+    log(`Writing ${index + 1}/${changed.length}: ${relative(piHome, plan.path)}`);
+    await atomicWrite(plan.path, plan.content, plan.mode);
+  }
 
-  log(`Installed jb-sdd-odd-models into ${piHome}.`);
-  if (backupRoot) log(`Backups: ${backupRoot}`);
+  log(`SUCCESS: Installed jb-sdd-odd-models ${version} into ${piHome} (${changed.length} changed files).`);
   log("Restart Pi, then run /jb-sdd-odd-models status.");
   return { changed: true, backupRoot, changedFiles: changed.map((plan) => plan.path) };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   installModelProfiles({ packageRoot: process.env.PACKAGE_ROOT, piHome: process.env.PI_HOME }).catch((error) => {
-    console.error(`jb-sdd-odd-models installer: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`FAILURE: jb-sdd-odd-models installer: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   });
 }

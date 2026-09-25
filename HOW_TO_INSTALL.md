@@ -18,6 +18,14 @@ cd /path/to/pi-sdd-model-switch
 ./install/install.sh
 ```
 
+The entrypoint is `./install/install.sh`; `./install` is a directory, not a command.
+
+### Package version
+
+`package.json.version` is the single SemVer source. To configure the version of your local package, edit that field before installation, for example to `1.2.3` or `1.2.3-rc.1+build.5`. Missing or invalid metadata fails before target mutation. This is package metadata, not an install-time version selector: changing it does not fetch a release or change the source code being installed.
+
+### Installed files
+
 The installer writes:
 
 - `~/.pi/agent/extensions/sdd-model-profiles.ts`
@@ -40,15 +48,49 @@ PI_HOME=/srv/my-pi pi
 
 The target must already contain `agent/`; this prevents accidentally installing into an arbitrary directory. The extension defaults to `~/.pi` when `PI_HOME` is unset.
 
+## Installer output
+
+Normal progress goes to stdout: preflight, resolved `PI_HOME`, package version, changed-file count, backup progress, and each file write. These abbreviated examples use version `1.1.0`; paths and counts vary.
+
+Successful update (stdout excerpts; exit status 0):
+
+```text
+Target PI_HOME: /srv/my-pi
+Package: jb-sdd-odd-models 1.1.0
+Plan: 1 changed file(s).
+Backup: saving 1 existing changed file(s) before writing install targets.
+Backup complete: /srv/my-pi/backups/jb-sdd-odd-models-<timestamp>-<pid>
+Writing 1/1: agent/extensions/sdd-model-profiles.ts
+SUCCESS: Installed jb-sdd-odd-models 1.1.0 into /srv/my-pi (1 changed files).
+Restart Pi, then run /jb-sdd-odd-models status.
+```
+
+Identical reinstall (stdout ending; exit status 0):
+
+```text
+Plan: 0 changed file(s).
+NO-OP: jb-sdd-odd-models 1.1.0 is already installed in /srv/my-pi; no files changed.
+```
+
+Invalid version (stderr; nonzero exit status):
+
+```text
+FAILURE: jb-sdd-odd-models installer: package.json.version must be a valid SemVer (for example, 1.2.3 or 1.2.3-rc.1+build.5).
+```
+
+Preflight progress may appear before a failure; it is not a success signal. A failed run does not print `SUCCESS:`. Resolve the reported error before retrying; for a write failure, inspect the destination and any reported backup first.
+
 ## Backups and reinstall behavior
 
-When an existing target changes, the installer creates a timestamped directory under:
+Before writing any install targets, the installer backs up all existing files that will change to a timestamped directory under:
 
 ```text
 $PI_HOME/backups/jb-sdd-odd-models-<timestamp>-<pid>/
 ```
 
 Backups retain paths relative to `PI_HOME`. Newly created files have no prior copy and therefore do not appear in the backup. A reinstall that would produce identical bytes changes nothing and creates no backup.
+
+Each target write is atomic, but the whole install is not. A later write failure can leave earlier files updated; there is no automatic rollback. See [Uninstall or restore](#uninstall-or-restore) for manual restoration.
 
 If an active transaction journal or lock exists, the installer fails closed before writing. Run `/jb-sdd-odd-models doctor` to inspect the state and `/jb-sdd-odd-models recover` only when it is safe to complete recovery.
 

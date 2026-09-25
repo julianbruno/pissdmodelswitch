@@ -11,7 +11,11 @@ cd /path/to/pissdmodelswitch
 ./install/install.sh
 ```
 
-Then restart Pi and verify the command is loaded:
+Use `./install/install.sh`, not `./install` (which is a directory). The installer uses this checkout's `package.json.version` as its SemVer source. To configure the package version, edit that field before installing; it is not an install-time version selector and does not download another release.
+
+Progress and `SUCCESS:` or `NO-OP:` appear on stdout. Failures print `FAILURE:` on stderr and exit nonzero; see [output examples](HOW_TO_INSTALL.md#installer-output).
+
+After a successful install, restart Pi and verify the command is loaded:
 
 ```text
 /jb-sdd-odd-models status
@@ -55,13 +59,13 @@ The target must already contain an `agent/` directory.
 
 ## Backups
 
-When an existing target file changes, the installer creates a backup under:
+Before writing install targets, the installer backs up existing files that will change under:
 
 ```text
 $PI_HOME/backups/jb-sdd-odd-models-<timestamp>-<pid>/
 ```
 
-Re-running the installer with identical generated files is a no-op and does not create a new backup.
+Re-running the installer with identical generated files is a no-op and does not create a new backup. Writes are atomic per file, not across the whole install; a failure does not automatically roll back files already written.
 
 ## Verify after restart
 

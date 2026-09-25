@@ -2,10 +2,11 @@
 set -eu
 
 fail() {
-  printf 'jb-sdd-odd-models installer: %s\n' "$*" >&2
+  printf 'FAILURE: jb-sdd-odd-models installer: %s\n' "$*" >&2
   exit 1
 }
 
+printf 'jb-sdd-odd-models installer starting. Preflight: checking Node.js and Pi home.\n'
 command -v node >/dev/null 2>&1 || fail "Node.js is required (Pi itself requires Node.js)."
 NODE_VERSION=$(node -p "process.versions.node" 2>/dev/null || node --version 2>/dev/null || printf '0.0.0')
 NODE_VERSION=${NODE_VERSION#v}
